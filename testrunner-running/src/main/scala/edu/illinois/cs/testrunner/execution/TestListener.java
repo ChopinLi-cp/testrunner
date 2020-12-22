@@ -1,5 +1,7 @@
 package edu.illinois.cs.testrunner.execution;
 
+import edu.illinois.cs.diaper.StateCapture;
+import edu.illinois.cs.diaper.agent.MainAgent;
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
@@ -35,7 +37,18 @@ public class TestListener extends RunListener {
 
     @Override
     public void testStarted(Description description) throws Exception {
-        times.put(JUnitTestRunner.fullName(description), System.nanoTime());
+        //times.put(JUnitTestRunner.fullName(description), System.nanoTime());
+        String fullTestName = JUnitTestRunner.fullName(description);
+        times.put(fullTestName, System.nanoTime());
+
+        System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                " fullTestName: " + fullTestName);
+        if(MainAgent.targetTestName.equals(fullTestName)) {
+            StateCapture sc = new StateCapture(fullTestName);//CaptureFactory.StateCapture(fullTestName);
+            System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
+            sc.capture();
+            //System.out.println("sc.dirty: " + sc.dirty);
+        }
     }
 
     @Override
