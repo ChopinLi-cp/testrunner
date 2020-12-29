@@ -6,14 +6,7 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 import edu.illinois.cs.diaper.agent.MainAgent;
 import edu.illinois.cs.diaper.DiaperLogger;
 
-import java.io.BufferedWriter;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.Writer;
+import java.io.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -56,11 +49,9 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import org.xml.sax.InputSource;
-import java.io.Reader;
-import java.io.CharArrayReader;
+
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
-import java.io.StringWriter;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.dom.DOMSource;
@@ -511,7 +502,7 @@ public class StateCapture implements IStateCapture {
         return keys;
     }
 
-    private void diffSub() {
+    private void diffSub() throws FileNotFoundException, UnsupportedEncodingException {
         String subxml0 = subxmlFold + "/0xml";
         String subxml1 = subxmlFold + "/1xml";
         String afterRootPath= rootFold + "/1.txt";
@@ -541,6 +532,14 @@ public class StateCapture implements IStateCapture {
                 }
             }
         }
+
+        int num = new File(MainAgent.diffFieldFold).listFiles().length;
+        PrintWriter writer = new PrintWriter(MainAgent.diffFieldFold + "/" + num+ ".txt", "UTF-8");
+
+        for(String ff: diffFields_filtered) {
+            writer.println(ff);
+        }
+        writer.close();
     }
 
     private void outputStatstics() {
@@ -554,24 +553,12 @@ public class StateCapture implements IStateCapture {
             while (reader.readLine() != null) allfields++;
             reader.close();
 
-            System.out.println("allfields: " + allfields + " alldifffields: " + countFiles(subxml0)
-                    + " diffFields.size(): " + diffFields.size() + " diffFields_filtered.size(): "
-                    + diffFields_filtered.size());
-            System.out.println(diffFields_filtered);
             String statistics = slug + "," + testName + "," + allfields
                     + "," + countFiles(subxml0) + "," + countFiles(subxml1) + "," + diffFields.size()
                 + "," + diffFields_filtered.size() + "\n";
 
             Files.write(Paths.get(MainAgent.outputPath), statistics.getBytes(),
                     StandardOpenOption.APPEND);
-
-            int num = new File(MainAgent.diffFieldFold).listFiles().length;
-            PrintWriter writer = new PrintWriter(MainAgent.diffFieldFold + "/" + num+ ".txt", "UTF-8");
-
-            for(String ff: diffFields_filtered) {
-                writer.println(ff);
-            }
-            writer.close();
 
         } catch (Exception e) {
 
@@ -654,7 +641,7 @@ public class StateCapture implements IStateCapture {
             try {
                 //diffPairs();
                 diffSub();
-                outputStatstics();
+                //outputStatstics();
                 //LinkedHashMap<String, Object> f2o = deserialize();
                 //reflection(f2o);
             }
@@ -741,10 +728,10 @@ public class StateCapture implements IStateCapture {
                 }
                 // if a field is final and has a primitive type there's no point to capture it.
                 if (Modifier.isStatic(f.getModifiers())
-                    && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive() )  ) {
+                    && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
                     try {
                         if (shouldCapture(f)) {
-                            allFiledName.add(fieldName);
+                               allFiledName.add(fieldName);
                                f.setAccessible(true);
 
                                //System.out.println("f.getType(): "+f.getType());
@@ -755,8 +742,8 @@ public class StateCapture implements IStateCapture {
                                dirty = false;
                                serializeRoots(nameToInstance_temp);
                                if(!dirty) {
-                                   System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
-                                           fieldName);
+                                   //System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
+                                     //      fieldName);
                                    nameToInstance.put(fieldName, instance);
 
                                    String ob4field = serializeOBs(instance);
@@ -793,13 +780,12 @@ public class StateCapture implements IStateCapture {
         writer.close();
 
         num = new File(MainAgent.fieldFold).listFiles().length;
-        if(num == 0) {
-            writer = new PrintWriter(MainAgent.fieldFold + "/" + num+ ".txt", "UTF-8");
-            for(String ff: allFiledName) {
-                writer.println(ff);
-            }
-            writer.close();
+        writer = new PrintWriter(MainAgent.fieldFold + "/" + num+ ".txt", "UTF-8");
+        for(String ff: allFiledName) {
+            writer.println(ff);
         }
+        writer.close();
+
     }
 
     protected boolean shouldCapture(Field f) {
