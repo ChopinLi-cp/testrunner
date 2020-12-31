@@ -866,7 +866,23 @@ public class StateCapture implements IStateCapture {
         sb.append(afterNode.getXPath());
         sb.append("\n");
 
+        sb.append(difference.getComparison().getType() + "\n");
+        sb.append("--------\n");
+
+        // Deal specifically with <entry> if in unordered map
+        if (controlNode != null) {
+            Node target = controlNode.getTarget();
+            if (target != null && target.getNodeName().equals("entry")) {
+                String[] elems = controlNode.getParentXPath().split("/");
+                String parentNodeContainer = elems[elems.length - 1].split("\\[")[0]; // Some splitting of path to see what container is
+                if (parentNodeContainer.equals("concurrent-hash-map")) {
+                    for (int i = 0; i < target.getChildNodes().getLength(); i++) {
+                        sb.append(target.getChildNodes().item(i).getTextContent());
+                        sb.append("\n");
+                    }
+                }
             }
+        }
     }
 
     /**
