@@ -137,7 +137,6 @@ public class StateCapture implements IStateCapture {
             };
         Thread t = new Thread(r);
         Runtime.getRuntime().addShutdownHook(t);
-        XMLUnit.setNormalizeWhitespace(Boolean.TRUE);
 
         whiteList = fileToSet(p, "whitelist");
         ignores = fileToSet(p, "ignores");
