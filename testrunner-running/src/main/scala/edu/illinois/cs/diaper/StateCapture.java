@@ -570,6 +570,7 @@ public class StateCapture implements IStateCapture {
                 String state0 = readFile(path0);
 
                 XStream xstream = new XStream();
+                xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
                 Object ob_0 = xstream.fromXML(state0);
                 f2o_correct.put(s, ob_0);
             }
@@ -1002,6 +1003,8 @@ public class StateCapture implements IStateCapture {
         xstream.omitField(java.lang.ref.SoftReference.class, "timestamp");
         xstream.omitField(java.lang.ref.SoftReference.class, "referent");
         xstream.omitField(java.lang.ref.Reference.class, "referent");
+
+        xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
 
         /*
           String ignores[][] = new String[][] {
