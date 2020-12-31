@@ -1,6 +1,10 @@
 package edu.illinois.cs.diaper;
 
 import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.converters.reflection.FieldDictionary;
+import com.thoughtworks.xstream.converters.reflection.FieldKey;
+import com.thoughtworks.xstream.converters.reflection.FieldKeySorter;
+import com.thoughtworks.xstream.converters.reflection.PureJavaReflectionProvider;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
 import edu.illinois.cs.diaper.agent.MainAgent;
@@ -11,25 +15,12 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.Queue;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
@@ -509,6 +500,7 @@ public class StateCapture implements IStateCapture {
         Set<String> afterRoots = File2SetString(afterRootPath);
 
         for(String s: afterRoots) {
+            //System.out.println("afterroot name: " + s);
             String path0 = subxml0 + "/" + s + ".xml";
             String path1 = subxml1 + "/" + s + ".xml";
             String state0 = ""; String state1 = "";
@@ -612,7 +604,7 @@ public class StateCapture implements IStateCapture {
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
-                                        "fiedl with reflaction: " + e);
+                                        "field with reflaction: " + e);
                             }
 
                             break;
@@ -986,9 +978,25 @@ public class StateCapture implements IStateCapture {
         return s;
     }
 
+    private static class AlphabeticalFieldkeySorter implements FieldKeySorter {
+        @Override
+        public Map sort(Class type, Map keyedByFieldKey) {
+            final Map<FieldKey, Field> map = new TreeMap<>(new Comparator<FieldKey>() {
+
+                @Override
+                public int compare(final FieldKey fieldKey1, final FieldKey fieldKey2) {
+                    return fieldKey1.getFieldName().compareTo(fieldKey2.getFieldName());
+                }
+            });
+            map.putAll(keyedByFieldKey);
+            return map;
+        }
+    }
 
     private XStream getXStreamInstance() {
-        XStream xstream = new XStream(new DomDriver());
+        //XStream xstream = new XStream(new DomDriver());
+        XStream xstream = new XStream(new PureJavaReflectionProvider(new FieldDictionary(
+                new AlphabeticalFieldkeySorter())),new DomDriver());
         xstream.setMode(XStream.XPATH_ABSOLUTE_REFERENCES);
         // Set fields to be omitted during serialization
         xstream.omitField(java.lang.ref.SoftReference.class, "timestamp");

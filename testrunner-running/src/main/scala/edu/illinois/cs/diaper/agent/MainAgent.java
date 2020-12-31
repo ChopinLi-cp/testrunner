@@ -18,6 +18,7 @@ public class MainAgent {
     public static String fieldFold;
     //public static String lognum;
     public static String subdiffFold;
+    public static String tmpfile;
    
     public static Instrumentation getInstrumentation() { return inst; }
    
@@ -37,6 +38,7 @@ public class MainAgent {
         fieldFold = args[8];
         diffFieldFold = args[9];
         subdiffFold = args[10];
+        tmpfile=args[11];
 
         System.out.println("targetTestName: " + targetTestName);
 

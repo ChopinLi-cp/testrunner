@@ -28,8 +28,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class JUnitTestExecutor {
-    public static final int IDEMPOTENT_NUM_RUNS =
+    public static final int IDEMPOTENT_NUM_RUNS=
         Configuration.config().getProperty("testplugin.runner.idempotent.num.runs", -1);
+
+    /*public static void setIdempotentnumruns(int i) {
+        IDEMPOTENT_NUM_RUNS=Configuration.config().getProperty("testplugin.runner.idempotent.num.runs", i);
+    }*/
 
     public static TestRunResult runOrder(final String testRunId,
                                          final List<String> testList,

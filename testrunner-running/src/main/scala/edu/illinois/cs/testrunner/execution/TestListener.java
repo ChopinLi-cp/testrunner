@@ -2,10 +2,14 @@ package edu.illinois.cs.testrunner.execution;
 
 import edu.illinois.cs.diaper.StateCapture;
 import edu.illinois.cs.diaper.agent.MainAgent;
+import org.apache.commons.io.FileUtils;
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -35,15 +39,25 @@ public class TestListener extends RunListener {
         ignoredTests.add(JUnitTestRunner.fullName(description));
     }
 
+    private String readFile(String path) throws IOException {
+        File file = new File(path);
+        return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+    }
+
     @Override
     public void testStarted(Description description) throws Exception {
         //times.put(JUnitTestRunner.fullName(description), System.nanoTime());
         String fullTestName = JUnitTestRunner.fullName(description);
         times.put(fullTestName, System.nanoTime());
 
-        System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
-                " fullTestName: " + fullTestName);
-        if(MainAgent.targetTestName.equals(fullTestName)) {
+        String phase = readFile(MainAgent.tmpfile);
+
+        if(MainAgent.targetTestName.equals(fullTestName)
+                && (phase.equals("3") || phase.equals("4") || phase.equals("5"))) {
+            System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                    " fullTestName: " + fullTestName);
+            System.out.println("phase: " + phase);
+
             StateCapture sc = new StateCapture(fullTestName);//CaptureFactory.StateCapture(fullTestName);
             System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
             sc.capture();
@@ -70,6 +84,19 @@ public class TestListener extends RunListener {
             testRuntimes.put(fullTestName, (System.nanoTime() - startTime) / 1E9);
         } else {
             System.out.println("Test finished but did not start: " + fullTestName);
+        }
+
+        String phase = readFile(MainAgent.tmpfile);
+        if(MainAgent.targetTestName.equals(fullTestName)
+                && phase.equals("2")) {
+            System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                    " fullTestName: " + fullTestName);
+            System.out.println("phase: " + phase);
+
+            StateCapture sc = new StateCapture(fullTestName);//CaptureFactory.StateCapture(fullTestName);
+            System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
+            sc.capture();
+            //System.out.println("sc.dirty: " + sc.dirty);
         }
     }
 }
