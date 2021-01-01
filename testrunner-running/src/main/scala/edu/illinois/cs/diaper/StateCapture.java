@@ -646,7 +646,7 @@ public class StateCapture implements IStateCapture {
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
                                         "field with reflaction: " + e);
-                                String output = fieldName + " reflectionError\n";
+                                String output = fieldName + " reflectionError: " + e + "\n";
                                 Files.write(Paths.get(reflectionFile), output.getBytes(),
                                         StandardOpenOption.APPEND);
                             }
@@ -660,7 +660,7 @@ public class StateCapture implements IStateCapture {
         }
         catch(Exception e) {
             System.out.println("error in xml deserialztion: " + e);
-            String output = fieldName + " deserializeError\n";
+            String output = fieldName + " deserializeError: " + e + "\n";
             Files.write(Paths.get(reflectionFile), output.getBytes(),
                     StandardOpenOption.APPEND);
         }
