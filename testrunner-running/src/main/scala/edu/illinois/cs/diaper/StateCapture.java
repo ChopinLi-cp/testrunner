@@ -93,6 +93,7 @@ public class StateCapture implements IStateCapture {
     public String rootFold;
     public String diffFold;
     public String slug;
+    public String reflectionFile;
 
     static { 
         Properties p = System.getProperties();
@@ -617,40 +618,89 @@ public class StateCapture implements IStateCapture {
             }
     }
 
-    public void capture() throws IOException {
+    public void setup() {
         xmlFold = MainAgent.xmlFold;
         subxmlFold = MainAgent.subxmlFold;
         rootFold = MainAgent.rootFold;
         diffFold = MainAgent.diffFold;
         slug = MainAgent.slug;
-
+        reflectionFile = MainAgent.reflectionFold + "/0.txt";
         xmlFileNum = new File(xmlFold).listFiles().length;
         System.out.println("xmlFileName: " + xmlFileNum);
 
-        if(xmlFileNum == 2) {
-            System.out.println("running diff!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" +
-                    "!!!&&&&&&&&&&&&&&&&&&&######################@@@@@@@@@@@@@@@@@@");
-            try {
-                //diffPairs();
-                diffSub();
-                //outputStatstics();
-                //LinkedHashMap<String, Object> f2o = deserialize();
-                //reflection(f2o);
-            }
-            catch (Exception e){
-                System.out.println("diff error: " + e) ;
-                return;
-            }
+    }
+
+    public void diffing() {
+        setup();
+        try {
+            //diffPairs();
+            diffSub();
         }
-        else {
-            try {
-                capture_real();
-            }
-            catch(Exception e) {
-                System.out.println("error happened when doing capture real: " + e);
-            }
-            System.out.println("capture_real done!!");
+        catch (Exception e){
+            System.out.println("diff error: " + e) ;
         }
+        System.out.println("diffing done!!");
+    }
+
+    public void fixing(String fieldName) throws IOException {
+        setup();
+        String subxml0 = subxmlFold + "/0xml";
+        try {
+                System.out.println("field: " + fieldName);
+                String path0 = subxml0 + "/" + fieldName + ".xml";
+                String state0 = readFile(path0);
+                XStream xstream = new XStream();
+                Object ob_0 = xstream.fromXML(state0);
+
+                String className = fieldName.substring(0, fieldName.lastIndexOf("."));
+                String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
+                System.out.println("subFieldName: " + subFieldName);
+                System.out.println("className: " + className);
+
+                try{
+                    Class c = Class.forName(className);
+                    Field[] Flist = c.getDeclaredFields();
+                    for(int i=0; i< Flist.length; i++) {
+                        //System.out.println("Flist[i].getName(): " + Flist[i].getName());
+                        if(Flist[i].getName().equals(subFieldName)) {
+                            try{
+                                Flist[i].setAccessible(true);
+                                Flist[i].set(null, ob_0);
+                                System.out.println("set!!!");
+                            }
+                            catch(Exception e) {
+                                System.out.println("exception in setting " +
+                                        "field with reflaction: " + e);
+                                String output = fieldName + " reflectionError\n";
+                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        StandardOpenOption.APPEND);
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch(Exception e){
+                    System.out.println("error in reflection: " + e);
+                }
+        }
+        catch(Exception e) {
+            System.out.println("error in xml deserialztion: " + e);
+            String output = fieldName + " deserializeError\n";
+            Files.write(Paths.get(reflectionFile), output.getBytes(),
+                    StandardOpenOption.APPEND);
+        }
+        System.out.println("reflection done!!");
+    }
+
+    public void capture() {
+        setup();
+        try {
+            capture_real();
+        }
+        catch(Exception e) {
+            System.out.println("error happened when doing capture real: " + e);
+        }
+        System.out.println("capture_real done!!");
     }
 
 
@@ -949,6 +999,7 @@ public class StateCapture implements IStateCapture {
     private String serializeRoots(Map<String, Object> state) {
         XStream xstream = getXStreamInstance();
         String s = "";
+        System.out.println(state);
         try {
             s = xstream.toXML(state);
             s = sanitizeXmlChars(s);

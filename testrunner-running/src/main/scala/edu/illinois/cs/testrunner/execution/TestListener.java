@@ -51,8 +51,33 @@ public class TestListener extends RunListener {
         times.put(fullTestName, System.nanoTime());
 
         String phase = readFile(MainAgent.tmpfile);
+        if(MainAgent.targetTestName.equals(fullTestName)) {
+            if(phase.equals("3") || phase.equals("4")) {
+                StateCapture sc = new StateCapture(fullTestName);
+                System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                        " fullTestName: " + fullTestName);
+                System.out.println("phase: " + phase);
+                System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
+                sc.capture();
+                //System.out.println("sc.dirty: " + sc.dirty);
+            }
+            else if(phase.equals("5")) {
+                StateCapture sc = new StateCapture(fullTestName);
+                System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                        " fullTestName: " + fullTestName);
+                System.out.println("phase: " + phase);
+                System.out.println("test listener!!!!!!!!! diffing the fields!!!!!!!!!!!!!");
+                sc.diffing();
+            }
+            else if(phase.startsWith("diffField:")) {
+                System.out.println("test listener!!!!!!!!! reflection on the states!!!!!!!!!!!!!");
+                StateCapture sc = new StateCapture(fullTestName);
+                String diffField = phase.replaceFirst("diffField:", "");
+                sc.fixing(diffField);
+            }
+        }
 
-        if(MainAgent.targetTestName.equals(fullTestName)
+        /*if(MainAgent.targetTestName.equals(fullTestName)
                 && (phase.equals("3") || phase.equals("4") || phase.equals("5"))) {
             System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
                     " fullTestName: " + fullTestName);
@@ -62,7 +87,7 @@ public class TestListener extends RunListener {
             System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
             sc.capture();
             //System.out.println("sc.dirty: " + sc.dirty);
-        }
+        }*/
     }
 
     @Override
