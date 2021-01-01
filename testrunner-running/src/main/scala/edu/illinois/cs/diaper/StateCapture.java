@@ -26,11 +26,14 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 
 import org.apache.maven.project.MavenProject;
-import org.custommonkey.xmlunit.DetailedDiff;
-import org.custommonkey.xmlunit.Diff;
-import org.custommonkey.xmlunit.Difference;
-import org.custommonkey.xmlunit.NodeDetail;
-import org.custommonkey.xmlunit.XMLUnit;
+
+import org.xmlunit.builder.DiffBuilder;
+import org.xmlunit.diff.Comparison.Detail;
+import org.xmlunit.diff.DefaultNodeMatcher;
+import org.xmlunit.diff.Diff;
+import org.xmlunit.diff.Difference;
+import org.xmlunit.diff.ElementSelectors;
+
 import java.lang.Object;
 
 import java.nio.charset.StandardCharsets;
@@ -135,7 +138,6 @@ public class StateCapture implements IStateCapture {
             };
         Thread t = new Thread(r);
         Runtime.getRuntime().addShutdownHook(t);
-        XMLUnit.setNormalizeWhitespace(Boolean.TRUE);
 
         whiteList = fileToSet(p, "whitelist");
         ignores = fileToSet(p, "ignores");
@@ -350,25 +352,11 @@ public class StateCapture implements IStateCapture {
             }*/
 
             ///*if (this.verbose) {
-            Diff diff = new Diff(beforeState, afterState);
-            DetailedDiff detDiff = new DetailedDiff(diff);
-            List differences = detDiff.getAllDifferences();
-            Collections.sort(differences, new Comparator() {
-                public int compare(Object o1, Object o2) {
-                    Difference d1 = (Difference)o1;
-                    Difference d2 = (Difference)o2;
-                    // Sort based on id, which should represent order in the XML
-                    if (d1.getId() < d2.getId()) {
-                        return -1;
-                    }
-                    else if (d1.getId() == d2.getId()) {
-                        return 0;
-                    }
-                    else {
-                        return 1;
-                    }
-                }
-            });
+            Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
+                withNodeMatcher(new DefaultNodeMatcher(ElementSelectors.byNameAndAllAttributes))
+                .checkForSimilar()
+                .build();
+            Iterable<Difference> differences = diff.getDifferences();
             for (Object object : differences) {
                 Difference difference = (Difference)object;
 
@@ -400,25 +388,11 @@ public class StateCapture implements IStateCapture {
             sb.append(statesAreSame);
             sb.append("\n");*/
 
-            Diff diff = new Diff(beforeState, afterState);
-            DetailedDiff detDiff = new DetailedDiff(diff);
-            List differences = detDiff.getAllDifferences();
-            Collections.sort(differences, new Comparator() {
-                public int compare(Object o1, Object o2) {
-                    Difference d1 = (Difference)o1;
-                    Difference d2 = (Difference)o2;
-                    // Sort based on id, which should represent order in the XML
-                    if (d1.getId() < d2.getId()) {
-                        return -1;
-                    }
-                    else if (d1.getId() == d2.getId()) {
-                        return 0;
-                    }
-                    else {
-                        return 1;
-                    }
-                }
-            });
+            Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
+                withNodeMatcher(new DefaultNodeMatcher(ElementSelectors.byNameAndAllAttributes))
+                .checkForSimilar()
+                .build();
+            Iterable<Difference> differences = diff.getDifferences();
             for (Object object : differences) {
                 Difference difference = (Difference)object;
 
@@ -571,6 +545,7 @@ public class StateCapture implements IStateCapture {
                 String state0 = readFile(path0);
 
                 XStream xstream = new XStream();
+                xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
                 Object ob_0 = xstream.fromXML(state0);
                 f2o_correct.put(s, ob_0);
             }
@@ -889,20 +864,20 @@ public class StateCapture implements IStateCapture {
     }
 
     private void makeDifferenceReport(Difference difference, String xmlDoc, StringBuilder sb) {
-        NodeDetail controlNode = difference.getControlNodeDetail();
-        NodeDetail afterNode = difference.getTestNodeDetail();
+        Detail controlNode = difference.getComparison().getControlDetails();
+        Detail afterNode = difference.getComparison().getTestDetails();
 
-        String diffXpath = controlNode.getXpathLocation();
+        String diffXpath = controlNode.getXPath();
         if (diffXpath == null) {
-            diffXpath = afterNode.getXpathLocation();
+            diffXpath = afterNode.getXPath();
             if (diffXpath == null) {
                 sb.append("NULL xpath\n");
                 return;
             }
         }
-        sb.append(controlNode.getXpathLocation());
+        sb.append(controlNode.getXPath());
         sb.append("\n");
-        sb.append(afterNode.getXpathLocation());
+        sb.append(afterNode.getXPath());
         sb.append("\n");
 
         String[] elems = diffXpath.split("/");
@@ -916,8 +891,6 @@ public class StateCapture implements IStateCapture {
                 String fieldD = n.getTextContent();
                 sb.append(fieldD);
                 sb.append("\n");
-                sb.append("AUGUST ID: " + difference.getId());
-                sb.append("\n");
                 diffFields.add(fieldD);
             } catch (Exception ex) {
                 //ex.printStackTrace();
@@ -927,41 +900,39 @@ public class StateCapture implements IStateCapture {
     }
 
     private void makeSubDifferenceReport(Difference difference, String xmlDoc, StringBuilder sb) {
-        NodeDetail controlNode = difference.getControlNodeDetail();
-        NodeDetail afterNode = difference.getTestNodeDetail();
+        Detail controlNode = difference.getComparison().getControlDetails();
+        Detail afterNode = difference.getComparison().getTestDetails();
 
-        String diffXpath = controlNode.getXpathLocation();
+        String diffXpath = controlNode.getXPath();
         if (diffXpath == null) {
-            diffXpath = afterNode.getXpathLocation();
+            diffXpath = afterNode.getXPath();
             if (diffXpath == null) {
                 sb.append("NULL xpath\n");
                 return;
             }
         }
-        sb.append(controlNode.getXpathLocation());
+        sb.append(controlNode.getXPath());
         sb.append("\n");
-        sb.append(afterNode.getXpathLocation());
+        sb.append(afterNode.getXPath());
         sb.append("\n");
 
-        /*String[] elems = diffXpath.split("/");
-        if (elems.length >= 3) {
-            diffXpath = "/" + elems[1] + "/" + elems[2];
-            try {
-                XPath xPath =  XPathFactory.newInstance().newXPath();
-                Node n = (Node) xPath.compile(diffXpath).evaluate(stringToXmlDocument(xmlDoc), XPathConstants.NODE);
-                n = n.getChildNodes().item(1);
-                sb.append("Static root: ");
-                String fieldD = n.getTextContent();
-                sb.append(fieldD);
-                sb.append("\n");
-                sb.append("AUGUST ID: " + difference.getId());
-                sb.append("\n");
-                //diffFields.add(fieldD);
-            } catch (Exception ex) {
-                //ex.printStackTrace();
-                System.out.println("exception in makedifferencereport!!" + ex);
+        sb.append(difference.getComparison().getType() + "\n");
+        sb.append("--------\n");
+
+        // Deal specifically with <entry> if in unordered map
+        if (controlNode != null) {
+            Node target = controlNode.getTarget();
+            if (target != null && target.getNodeName().equals("entry")) {
+                String[] elems = controlNode.getParentXPath().split("/");
+                String parentNodeContainer = elems[elems.length - 1].split("\\[")[0]; // Some splitting of path to see what container is
+                if (parentNodeContainer.equals("concurrent-hash-map")) {
+                    for (int i = 0; i < target.getChildNodes().getLength(); i++) {
+                        sb.append(target.getChildNodes().item(i).getTextContent());
+                        sb.append("\n");
+                    }
+                }
             }
-        }*/
+        }
     }
 
     /**
@@ -1053,6 +1024,8 @@ public class StateCapture implements IStateCapture {
         xstream.omitField(java.lang.ref.SoftReference.class, "timestamp");
         xstream.omitField(java.lang.ref.SoftReference.class, "referent");
         xstream.omitField(java.lang.ref.Reference.class, "referent");
+
+        xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
 
         /*
           String ignores[][] = new String[][] {
