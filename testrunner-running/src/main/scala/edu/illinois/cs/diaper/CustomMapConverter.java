@@ -25,8 +25,8 @@ public class CustomMapConverter extends MapConverter {
             writer.addAttribute("key", entry.getKey().toString());
             writer.addAttribute("value", entry.getValue().toString());
 
-            writeCompleteItem(entry.getKey(), context, writer);
-            writeCompleteItem(entry.getValue(), context, writer);
+            writeItem(entry.getKey(), context, writer);
+            writeItem(entry.getValue(), context, writer);
 
             writer.endNode();
         }
