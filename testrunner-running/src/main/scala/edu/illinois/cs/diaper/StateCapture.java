@@ -1,10 +1,8 @@
 package edu.illinois.cs.diaper;
 
 import com.thoughtworks.xstream.XStream;
-import com.thoughtworks.xstream.converters.reflection.FieldDictionary;
-import com.thoughtworks.xstream.converters.reflection.FieldKey;
-import com.thoughtworks.xstream.converters.reflection.FieldKeySorter;
-import com.thoughtworks.xstream.converters.reflection.PureJavaReflectionProvider;
+import com.thoughtworks.xstream.converters.reflection.*;
+import com.thoughtworks.xstream.core.JVM;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
 import edu.illinois.cs.diaper.agent.MainAgent;
@@ -376,17 +374,10 @@ public class StateCapture implements IStateCapture {
 
     private void recordsubDiff(String testname, String beforeState,
                             String afterState, String fileName) {
-
-        // returns a new afterState only having the roots that are common with the beforeState
-        //afterState = checkAdded(beforeState, beforeRoots, afterState, afterRoots);
         try {
             boolean statesAreSame = beforeState.equals(afterState);
             // create a string builder
             StringBuilder sb = new StringBuilder();
-            /*sb.append(testname);
-            sb.append(" ");
-            sb.append(statesAreSame);
-            sb.append("\n");*/
 
             Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
                 withNodeMatcher(new DefaultNodeMatcher(ElementSelectors.byNameAndAllAttributes))
@@ -577,6 +568,7 @@ public class StateCapture implements IStateCapture {
                                 Flist[i].setAccessible(true);
                                 Flist[i].set(null, ob);
                                 System.out.println("set!!!");
+
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
@@ -624,13 +616,14 @@ public class StateCapture implements IStateCapture {
                 System.out.println("field: " + fieldName);
                 String path0 = subxml0 + "/" + fieldName + ".xml";
                 String state0 = readFile(path0);
-                XStream xstream = new XStream();
+                //XStream xstream = new XStream();
+                XStream xstream = getXStreamInstance();
                 Object ob_0 = xstream.fromXML(state0);
 
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
                 String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
-                System.out.println("subFieldName: " + subFieldName);
-                System.out.println("className: " + className);
+                //System.out.println("subFieldName: " + subFieldName);
+                //System.out.println("className: " + className);
 
                 try{
                     Class c = Class.forName(className);
@@ -639,9 +632,16 @@ public class StateCapture implements IStateCapture {
                         //System.out.println("Flist[i].getName(): " + Flist[i].getName());
                         if(Flist[i].getName().equals(subFieldName)) {
                             try{
+                                if(fieldName.equals("net.sf.marineapi.nmea.parser.SentenceFactory.parsers")) {
+                                    System.out.println("parser ob: " + ob_0);
+                                }
                                 Flist[i].setAccessible(true);
+                                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                                modifiersField.setAccessible(true);
+                                modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
+
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
@@ -973,13 +973,24 @@ public class StateCapture implements IStateCapture {
         System.out.println(state);
         try {
             s = xstream.toXML(state);
-            s = sanitizeXmlChars(s);
+
         } catch (Exception e) {
+            //System.out.println("s in serializeRoots: " + s);
             // In case serialization fails, mark the StateCapture for this test
             // as dirty, meaning it should be ignored
-            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&error: " + e);
+            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&toxml error: " );
+            e.printStackTrace();
             dirty = true;
             //throw e;
+        }
+
+        try{
+            s = sanitizeXmlChars(s);
+        }
+        catch(Exception e) {
+            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&sanitizeXmlChars error: " );
+            e.printStackTrace();
+            dirty = true;
         }
         return s;
     }
@@ -987,8 +998,10 @@ public class StateCapture implements IStateCapture {
     private String serializeOBs(Object ob) {
         XStream xstream = getXStreamInstance();
         String s = "";
+
         try {
             s = xstream.toXML(ob);
+
             s = sanitizeXmlChars(s);
         } catch (Exception e) {
             // In case serialization fails, mark the StateCapture for this test
@@ -1017,10 +1030,17 @@ public class StateCapture implements IStateCapture {
 
     private XStream getXStreamInstance() {
         //XStream xstream = new XStream(new DomDriver());
-        XStream xstream = new XStream(new PureJavaReflectionProvider(new FieldDictionary(
+        //XStream xstream = new XStream(new PureJavaReflectionProvider(new FieldDictionary(
+              //  new AlphabeticalFieldkeySorter())),new DomDriver());
+        //XStream xstream = new XStream(new Sun14ReflectionProvider(new FieldDictionary(
+               //  new AlphabeticalFieldkeySorter())),new DomDriver());
+        XStream xstream = new XStream(JVM.newReflectionProvider(new FieldDictionary(
                 new AlphabeticalFieldkeySorter())),new DomDriver());
+
+
         xstream.setMode(XStream.XPATH_ABSOLUTE_REFERENCES);
         // Set fields to be omitted during serialization
+        xstream.omitField(java.lang.Thread.class, "contextClassLoader");
         xstream.omitField(java.lang.ref.SoftReference.class, "timestamp");
         xstream.omitField(java.lang.ref.SoftReference.class, "referent");
         xstream.omitField(java.lang.ref.Reference.class, "referent");
