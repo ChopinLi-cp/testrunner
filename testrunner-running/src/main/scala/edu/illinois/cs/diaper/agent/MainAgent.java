@@ -20,7 +20,7 @@ public class MainAgent {
     public static String subdiffFold;
     public static String tmpfile;
     public static String reflectionFold;
-   
+
     public static Instrumentation getInstrumentation() { return inst; }
    
     public static void premain(String agentArgs, Instrumentation inst) {  
@@ -41,6 +41,7 @@ public class MainAgent {
         subdiffFold = args[10];
         tmpfile=args[11];
         reflectionFold = args[12];
+
 
         System.out.println("targetTestName: " + targetTestName);
 

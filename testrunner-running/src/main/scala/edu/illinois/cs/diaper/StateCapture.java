@@ -529,52 +529,67 @@ public class StateCapture implements IStateCapture {
         LinkedHashMap<String, Object> f2o_correct =
                 new LinkedHashMap<String, Object>();
         String subxml0 = subxmlFold + "/0xml";
-        try {
-            for (String s : diffFields_filtered) {
-                System.out.println("field: " + s);
-                String path0 = subxml0 + "/" + s + ".xml";
-                String state0 = readFile(path0);
+        String diffFile = MainAgent.diffFieldFold + "/0.txt";
+        try (BufferedReader br = new BufferedReader(new FileReader(diffFile))) {
+            String s;
+            while ((s = br.readLine()) != null) {
+                try{
+                    System.out.println("field in deserialize: " + s);
+                    String path0 = subxml0 + "/" + s + ".xml";
+                    String state0 = readFile(path0);
+                    XStream xstream = getXStreamInstance();
+                    Object ob_0 = xstream.fromXML(state0);
+                    f2o_correct.put(s, ob_0);
+                    //System.out.println("ob_0: " + ob_0);
+                }
+                catch (Exception e) {
+                    System.out.println("error in xml deserialztion: " + e);
+                    String output = s + " deserializeError: " + e + "\n";
+                    Files.write(Paths.get(reflectionFile), output.getBytes(),
+                            StandardOpenOption.APPEND);
+                }
 
-                XStream xstream = new XStream();
-                xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
-                Object ob_0 = xstream.fromXML(state0);
-                f2o_correct.put(s, ob_0);
             }
-        }
-        catch(Exception e) {
-            System.out.println("error in xml deserialztion: " + e);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         return f2o_correct;
     }
 
     private void reflection(LinkedHashMap<String, Object> f2o) {
+        System.out.println("f2o: " + f2o.keySet());
             for(String fieldName: f2o.keySet()) {
                 System.out.println("***field in f2o: " + fieldName);
-                System.out.println("object in f2o: " + f2o.get(fieldName));
+                Object ob = "";
+                ob = f2o.get(fieldName);
+
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
                 String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
-                System.out.println("subFieldName: " + subFieldName);
-                System.out.println("className: " + className);
-                Object ob = f2o.get(fieldName);
                 try{
                     Class c = Class.forName(className);
                     Field[] Flist = c.getDeclaredFields();
                     for(int i=0; i< Flist.length; i++) {
-                       //System.out.println("Flist[i].getName(): " + Flist[i].getName());
                         if(Flist[i].getName().equals(subFieldName)) {
-                                //&& subFieldName.contains("CONNECTION_FACTORY")) {
                             try{
                                 Flist[i].setAccessible(true);
-                                Flist[i].set(null, ob);
+                                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                                modifiersField.setAccessible(true);
+                                modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                                Flist[i].set(Flist[i].getType(), ob);
+                                //System.out.println("ob: " + ob);
                                 System.out.println("set!!!");
-
+                                String output = fieldName + " set\n";
+                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        StandardOpenOption.APPEND);
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
                                         "field with reflaction: " + e);
+                                String output = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        StandardOpenOption.APPEND);
                             }
-
                             break;
                         }
                     }
@@ -583,6 +598,14 @@ public class StateCapture implements IStateCapture {
                     System.out.println("class for name exception: " + e);
                 }
             }
+            System.out.println("reflection done!");
+    }
+
+    public void reflectionAll() {
+        setup();
+        LinkedHashMap<String, Object> f2o_correct = deserialize();
+        reflection(f2o_correct);
+        System.out.println("reflectionAll done!!");
     }
 
     public void setup() {
@@ -593,6 +616,7 @@ public class StateCapture implements IStateCapture {
         slug = MainAgent.slug;
         reflectionFile = MainAgent.reflectionFold + "/0.txt";
         xmlFileNum = new File(xmlFold).listFiles().length;
+
         System.out.println("xmlFileName: " + xmlFileNum);
 
     }

@@ -69,12 +69,21 @@ public class TestListener extends RunListener {
                 System.out.println("test listener!!!!!!!!! diffing the fields!!!!!!!!!!!!!");
                 sc.diffing();
             }
-            else if(phase.startsWith("diffField:")) {
+            else if(phase.equals("6")) {
+                StateCapture sc = new StateCapture(fullTestName);
+                System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                        " fullTestName: " + fullTestName);
+                System.out.println("phase: " + phase);
+                System.out.println("test listener!!!!!!!!! reflection on all the fields!!!!!!!!!!!!!");
+                sc.reflectionAll();
+            }
+            /*else if(phase.startsWith("diffField:")) {
                 System.out.println("test listener!!!!!!!!! reflection on the states!!!!!!!!!!!!!");
                 StateCapture sc = new StateCapture(fullTestName);
                 String diffField = phase.replaceFirst("diffField:", "");
                 sc.fixing(diffField);
-            }
+            }*/
+            System.out.println("testStarted end!!");
         }
 
         /*if(MainAgent.targetTestName.equals(fullTestName)
@@ -122,6 +131,14 @@ public class TestListener extends RunListener {
             System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
             sc.capture();
             //System.out.println("sc.dirty: " + sc.dirty);
+        }
+
+        if(phase.startsWith("7 ") && phase.replaceFirst( "7 ", "").equals(fullTestName) ) {
+            StateCapture sc = new StateCapture(fullTestName);
+            System.out.println("fullTestName at phase 7: " + fullTestName);
+            System.out.println("phase: " + phase);
+            System.out.println("test listener!!!!!!!!! reflection at phase 7 on all the fields!!!!!!!!!!!!!");
+            sc.reflectionAll();
         }
     }
 }
