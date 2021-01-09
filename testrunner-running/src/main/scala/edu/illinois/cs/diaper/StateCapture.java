@@ -656,9 +656,6 @@ public class StateCapture implements IStateCapture {
                         //System.out.println("Flist[i].getName(): " + Flist[i].getName());
                         if(Flist[i].getName().equals(subFieldName)) {
                             try{
-                                if(fieldName.equals("net.sf.marineapi.nmea.parser.SentenceFactory.parsers")) {
-                                    System.out.println("parser ob: " + ob_0);
-                                }
                                 Flist[i].setAccessible(true);
                                 Field modifiersField = Field.class.getDeclaredField("modifiers");
                                 modifiersField.setAccessible(true);
@@ -666,6 +663,9 @@ public class StateCapture implements IStateCapture {
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
 
+                                String output = fieldName + " set\n";
+                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        StandardOpenOption.APPEND);
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
