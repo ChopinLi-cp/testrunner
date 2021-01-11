@@ -351,7 +351,12 @@ public class StateCapture implements IStateCapture {
 
             ///*if (this.verbose) {
             Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
-                withNodeMatcher(new DefaultNodeMatcher(ElementSelectors.byNameAndAllAttributes))
+                withNodeMatcher(new DefaultNodeMatcher(
+                    ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
+                    .thenUse(ElementSelectors.byXPath("./key", ElementSelectors.byNameAndText))
+                    .elseUse(ElementSelectors.byName)
+                    .build()
+                ))
                 .checkForSimilar()
                 .build();
             Iterable<Difference> differences = diff.getDifferences();
@@ -380,7 +385,12 @@ public class StateCapture implements IStateCapture {
             StringBuilder sb = new StringBuilder();
 
             Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
-                withNodeMatcher(new DefaultNodeMatcher(ElementSelectors.byNameAndAllAttributes))
+                withNodeMatcher(new DefaultNodeMatcher(
+                    ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
+                    .thenUse(ElementSelectors.byXPath("./key", ElementSelectors.byNameAndText))
+                    .elseUse(ElementSelectors.byName)
+                    .build()
+                ))
                 .checkForSimilar()
                 .build();
             Iterable<Difference> differences = diff.getDifferences();
