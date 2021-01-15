@@ -1064,7 +1064,20 @@ public class StateCapture implements IStateCapture {
 
         xstream.setMode(XStream.XPATH_ABSOLUTE_REFERENCES);
         // Set fields to be omitted during serialization
+
         xstream.omitField(java.lang.Thread.class, "contextClassLoader");
+        xstream.omitField(java.security.ProtectionDomain.class, "classloader");
+        //
+        //com.sun.jmx.mbeanserver.ModifiableClassLoaderRepository.class;
+        try {
+            xstream.omitField(Class.forName("com.sun.jmx.mbeanserver.ClassLoaderRepositorySupport$LoaderEntry"), "loader");
+            xstream.omitField(Class.forName("sun.misc.Launcher$AppClassLoader"), "defaultDomain");
+            xstream.omitField(Class.forName("sun.misc.Launcher$AppClassLoader"), "classes");
+        }
+
+        catch(Exception ex) {
+            System.out.println("error occur in Class.forName in getXStreamInstance: " + ex);
+        }
         xstream.omitField(java.lang.ref.SoftReference.class, "timestamp");
         xstream.omitField(java.lang.ref.SoftReference.class, "referent");
         xstream.omitField(java.lang.ref.Reference.class, "referent");
