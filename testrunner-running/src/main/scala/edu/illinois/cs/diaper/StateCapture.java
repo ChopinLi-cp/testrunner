@@ -476,7 +476,7 @@ public class StateCapture implements IStateCapture {
         Set<String> afterRoots = File2SetString(afterRootPath);
 
         for(String s: afterRoots) {
-            //System.out.println("afterroot name: " + s);
+
             String path0 = subxml0 + "/" + s + ".xml";
             String path1 = subxml1 + "/" + s + ".xml";
             String state0 = ""; String state1 = "";
@@ -494,17 +494,22 @@ public class StateCapture implements IStateCapture {
                 }
 
                 if (!state0.equals(state1)) {
+                    System.out.println("afterroot name in diffFields_filetered: " + s);
                     diffFields_filtered.add(s);
                     String subdiffFile = MainAgent.subdiffFold + "/" + s + ".txt";
                     recordsubDiff(testName, state0, state1, subdiffFile);
+                    System.out.println("finish** afterroot name in diffFields_filetered!!!!");
                 }
             }
         }
 
+        System.out.println("creating diff file!!!!!!!!!!!!!");
         int num = new File(MainAgent.diffFieldFold).listFiles().length;
         PrintWriter writer = new PrintWriter(MainAgent.diffFieldFold + "/" + num+ ".txt", "UTF-8");
+        System.out.println("finish creating diff file!!!!!!!!!!!!!");
 
         for(String ff: diffFields_filtered) {
+
             writer.println(ff);
         }
         writer.close();
@@ -1000,7 +1005,7 @@ public class StateCapture implements IStateCapture {
     private String serializeRoots(Map<String, Object> state) {
         XStream xstream = getXStreamInstance();
         String s = "";
-        System.out.println(state);
+        //System.out.println(state);
         try {
             s = xstream.toXML(state);
 
