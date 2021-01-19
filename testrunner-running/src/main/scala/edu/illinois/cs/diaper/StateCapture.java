@@ -1078,12 +1078,13 @@ public class StateCapture implements IStateCapture {
 
         xstream.omitField(java.lang.Thread.class, "contextClassLoader");
         xstream.omitField(java.security.ProtectionDomain.class, "classloader");
+        xstream.omitField(java.security.ProtectionDomain.class, "codesource");
+        xstream.omitField(java.lang.ClassLoader.class, "defaultDomain");
+        xstream.omitField(java.lang.ClassLoader.class, "classes");
         //
         //com.sun.jmx.mbeanserver.ModifiableClassLoaderRepository.class;
         try {
             xstream.omitField(Class.forName("com.sun.jmx.mbeanserver.ClassLoaderRepositorySupport$LoaderEntry"), "loader");
-            xstream.omitField(Class.forName("sun.misc.Launcher$AppClassLoader"), "defaultDomain");
-            xstream.omitField(Class.forName("sun.misc.Launcher$AppClassLoader"), "classes");
         }
 
         catch(Exception ex) {
