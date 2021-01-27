@@ -1087,6 +1087,11 @@ public class StateCapture implements IStateCapture {
         //com.sun.jmx.mbeanserver.ModifiableClassLoaderRepository.class;
         try {
             xstream.omitField(Class.forName("com.sun.jmx.mbeanserver.ClassLoaderRepositorySupport$LoaderEntry"), "loader");
+            xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "allocationsTiny");
+            xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "allocationsSmall");
+            xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "allocationsHuge");
+            xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "activeBytesHuge");
+            xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "deallocationsHuge");
         }
 
         catch(Exception ex) {
