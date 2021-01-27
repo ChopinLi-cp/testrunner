@@ -352,10 +352,11 @@ public class StateCapture implements IStateCapture {
             ///*if (this.verbose) {
             Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
                 withNodeMatcher(new DefaultNodeMatcher(
-                    ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
+                    /*ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
                     .thenUse(ElementSelectors.byXPath("./key", ElementSelectors.byNameAndText))
                     .elseUse(ElementSelectors.byName)
-                    .build()
+                    .build()*/
+                    ElementSelectors.byName
                 ))
                 .checkForSimilar()
                 .build();
@@ -386,10 +387,11 @@ public class StateCapture implements IStateCapture {
 
             Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
                 withNodeMatcher(new DefaultNodeMatcher(
-                    ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
+                    /*ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
                     .thenUse(ElementSelectors.byXPath("./key", ElementSelectors.byNameAndText))
                     .elseUse(ElementSelectors.byName)
-                    .build()
+                    .build()*/
+                    ElementSelectors.byName
                 ))
                 .checkForSimilar()
                 .build();
