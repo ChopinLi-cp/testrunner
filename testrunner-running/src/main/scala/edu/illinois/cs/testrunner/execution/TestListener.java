@@ -50,7 +50,7 @@ public class TestListener extends RunListener {
         String fullTestName = JUnitTestRunner.fullName(description);
         times.put(fullTestName, System.nanoTime());
 
-        String phase = readFile(MainAgent.tmpfile);
+        /*String phase = readFile(MainAgent.tmpfile);
         if(MainAgent.targetTestName.equals(fullTestName)) {
             if(phase.equals("3") || phase.equals("4")) {
                 StateCapture sc = new StateCapture(fullTestName);
@@ -69,14 +69,6 @@ public class TestListener extends RunListener {
                 System.out.println("test listener!!!!!!!!! diffing the fields!!!!!!!!!!!!!");
                 sc.diffing();
             }
-            /*else if(phase.equals("6")) {
-                StateCapture sc = new StateCapture(fullTestName);
-                System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
-                        " fullTestName: " + fullTestName);
-                System.out.println("phase: " + phase);
-                System.out.println("test listener!!!!!!!!! reflection on all the fields!!!!!!!!!!!!!");
-                sc.reflectionAll();
-            }*/
             else if(phase.startsWith("diffFieldBefore ")) {
                 System.out.println("test listener!!!!!!!!! reflection on the states before!!!!!!!!!!!!!");
                 StateCapture sc = new StateCapture(fullTestName);
@@ -84,19 +76,20 @@ public class TestListener extends RunListener {
                 sc.fixing(diffField);
             }
             System.out.println("testStarted end!!");
-        }
-
-        /*if(MainAgent.targetTestName.equals(fullTestName)
-                && (phase.equals("3") || phase.equals("4") || phase.equals("5"))) {
-            System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
-                    " fullTestName: " + fullTestName);
-            System.out.println("phase: " + phase);
-
-            StateCapture sc = new StateCapture(fullTestName);//CaptureFactory.StateCapture(fullTestName);
-            System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
-            sc.capture();
-            //System.out.println("sc.dirty: " + sc.dirty);
         }*/
+
+        String phase = readFile(MainAgent.tmpfile);
+        if(MainAgent.targetTestName.equals(fullTestName)) {
+            if (phase.equals("3")) {
+                StateCapture sc = new StateCapture(fullTestName);
+                System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                        " fullTestName: " + fullTestName);
+                System.out.println("phase: " + phase);
+                System.out.println("test listener! at before !!!!!!!! Capturing the states!!!!!!!!!!!!!");
+                sc.capture();
+                //System.out.println("sc.dirty: " + sc.dirty);
+            }
+        }
     }
 
     @Override
@@ -121,6 +114,39 @@ public class TestListener extends RunListener {
         }
 
         String phase = readFile(MainAgent.tmpfile);
+
+            if(phase.startsWith("4")) {
+                String polluter = phase.split(" ")[1];
+                if(polluter.equals(fullTestName)) {
+                    StateCapture sc = new StateCapture(fullTestName);
+                    System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                            " fullTestName: " + fullTestName);
+                    System.out.println("phase: " + phase);
+                    System.out.println("test listener at after!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
+                    sc.capture();
+                }
+            }
+            else if(phase.startsWith("5")) {
+                String polluter = phase.split(" ")[1];
+                if(polluter.equals(fullTestName)) {
+                    StateCapture sc = new StateCapture(fullTestName);
+                    System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                            " fullTestName: " + fullTestName);
+                    System.out.println("phase: " + phase);
+                    System.out.println("test listener at after!!!!!!!!! diffing the fields!!!!!!!!!!!!!");
+                    sc.diffing();
+                }
+            }
+            else if(phase.startsWith("diffFieldAfter ")) {
+                String polluter = phase.split(" ")[1];
+                if(polluter.equals(fullTestName)) {
+                    System.out.println("test listener at after!!!!!!!!! reflection on the states after!!!!!!!!!!!!!");
+                    StateCapture sc = new StateCapture(fullTestName);
+                    String diffField = phase.split(" ")[2];
+                    sc.fixing(diffField);
+                }
+            }
+
         if(MainAgent.targetTestName.equals(fullTestName)
                 && phase.equals("2")) {
             System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
@@ -128,19 +154,9 @@ public class TestListener extends RunListener {
             System.out.println("phase: " + phase);
 
             StateCapture sc = new StateCapture(fullTestName);//CaptureFactory.StateCapture(fullTestName);
-            System.out.println("test listener!!!!!!!!! Capturing the states!!!!!!!!!!!!!");
+            System.out.println("test listener at after !!!!!!!!! Capturing the states!!!!!!!!!!!!!");
             sc.capture();
             //System.out.println("sc.dirty: " + sc.dirty);
-        }
-
-        if(phase.startsWith("diffFieldAfter ")) {
-            String polluter = phase.split(" ")[1];
-            if(polluter.equals(fullTestName)) {
-                System.out.println("test listener!!!!!!!!! reflection on the states after!!!!!!!!!!!!!");
-                StateCapture sc = new StateCapture(fullTestName);
-                String diffField = phase.split(" ")[2];
-                sc.fixing(diffField);
-            }
         }
 
         /*if(phase.startsWith("7 ") && phase.replaceFirst( "7 ", "").equals(fullTestName) ) {
