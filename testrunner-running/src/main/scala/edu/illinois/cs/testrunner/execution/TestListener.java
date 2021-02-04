@@ -89,12 +89,12 @@ public class TestListener extends RunListener {
                 sc.capture();
                 //System.out.println("sc.dirty: " + sc.dirty);
             }
-            else if(phase.startsWith("diffFieldBefore ")) {
+            /*else if(phase.startsWith("diffFieldBefore ")) {
                 System.out.println("test listener!!!!!!!!! reflection on the states before!!!!!!!!!!!!!");
                 StateCapture sc = new StateCapture(fullTestName);
                 String diffField = phase.replaceFirst("diffFieldBefore ", "");
                 sc.fixing(diffField);
-            }
+            }*/
         }
     }
 
