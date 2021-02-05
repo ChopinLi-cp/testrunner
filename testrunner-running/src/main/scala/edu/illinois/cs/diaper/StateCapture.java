@@ -478,7 +478,6 @@ public class StateCapture implements IStateCapture {
         Set<String> afterRoots = File2SetString(afterRootPath);
 
         for(String s: afterRoots) {
-
             String path0 = subxml0 + "/" + s + ".xml";
             String path1 = subxml1 + "/" + s + ".xml";
             String state0 = ""; String state1 = "";
