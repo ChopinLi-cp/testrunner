@@ -66,7 +66,7 @@ public class TestListener extends RunListener {
                 System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
                         " fullTestName: " + fullTestName);
                 System.out.println("phase: " + phase);
-                System.out.println("test listener!!!!!!!!! diffing the fields!!!!!!!!!!!!!");
+                System.out.println("test listener!!!!!!!!! diffing the fields in passorder!!!!!!!!!!!!!");
                 sc.diffing();
             }
             else if(phase.startsWith("diffFieldBefore ")) {
@@ -142,16 +142,25 @@ public class TestListener extends RunListener {
                 }
             }
 
-        if(MainAgent.targetTestName.equals(fullTestName)
-                && phase.equals("2")) {
-            System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
-                    " fullTestName: " + fullTestName);
-            System.out.println("phase: " + phase);
+        if(MainAgent.targetTestName.equals(fullTestName)) {
+            if(phase.equals("2")) {
+                System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                        " fullTestName: " + fullTestName);
+                System.out.println("phase: " + phase);
 
-            StateCapture sc = new StateCapture(fullTestName);//CaptureFactory.StateCapture(fullTestName);
-            System.out.println("test listener at after !!!!!!!!! Capturing the states!!!!!!!!!!!!!");
-            sc.capture();
-            //System.out.println("sc.dirty: " + sc.dirty);
+                StateCapture sc = new StateCapture(fullTestName);//CaptureFactory.StateCapture(fullTestName);
+                System.out.println("test listener at after !!!!!!!!! Capturing the states!!!!!!!!!!!!!");
+                sc.capture();
+                //System.out.println("sc.dirty: " + sc.dirty);
+            }
+            else if(phase.equals("5doublevic")) {
+                StateCapture sc = new StateCapture(fullTestName);
+                System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
+                        " fullTestName: " + fullTestName);
+                System.out.println("phase: " + phase);
+                System.out.println("test listener!!!!!!!!! diffing the fields in doublevictim order!!!!!!!!!!!!!");
+                sc.diffing();
+            }
         }
 
         /*if(phase.startsWith("7 ") && phase.replaceFirst( "7 ", "").equals(fullTestName) ) {
