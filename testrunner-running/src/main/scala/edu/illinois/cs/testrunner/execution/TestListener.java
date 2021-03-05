@@ -10,10 +10,7 @@ import org.junit.runner.notification.RunListener;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class TestListener extends RunListener {
     private final Map<String, Long> times;
@@ -69,12 +66,12 @@ public class TestListener extends RunListener {
                 System.out.println("test listener!!!!!!!!! diffing the fields in passorder!!!!!!!!!!!!!");
                 sc.diffing();
             }
-            else if(phase.startsWith("diffFieldBefore ")) {
+            /*else if(phase.startsWith("diffFieldBefore ")) {
                 System.out.println("test listener!!!!!!!!! reflection on the states before!!!!!!!!!!!!!");
                 StateCapture sc = new StateCapture(fullTestName);
                 String diffField = phase.replaceFirst("diffFieldBefore ", "");
                 sc.fixing(diffField);
-            }
+            }*/
             System.out.println("testStarted end!!");
         }
 
@@ -135,11 +132,24 @@ public class TestListener extends RunListener {
             else if(phase.startsWith("diffFieldAfter ")) {
                 String polluter = phase.split(" ")[1];
                 if(polluter.equals(fullTestName)) {
-                    System.out.println("test listener at after!!!!!!!!! reflection on the states after!!!!!!!!!!!!!");
-                    StateCapture sc = new StateCapture(fullTestName);
-                    String diffField = phase.split(" ")[2];
-                    sc.fixing(diffField);
+                    // reflect one field each time
+                    if(phase.split(" ").length == 3) {
+                        System.out.println("test listener at after!!!!!!!!! reflection on the states after!!!!!!!!!!!!!");
+                        StateCapture sc = new StateCapture(fullTestName);
+                        String diffField = phase.split(" ")[2];
+                        sc.fixing(diffField);
+                    }
+                    else if(phase.split(" ").length == 4){
+                        StateCapture sc = new StateCapture(fullTestName);
+                        List<String> fields = new ArrayList<>();
+                        String diffField1 = phase.split(" ")[2];
+                        String diffField2 = phase.split(" ")[3];
+                        fields.add(diffField1);
+                        fields.add(diffField2);
+                        sc.fixingFList(fields);
+                    }
                 }
+
             }
 
         if(MainAgent.targetTestName.equals(fullTestName)) {

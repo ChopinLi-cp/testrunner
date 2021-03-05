@@ -707,6 +707,68 @@ public class StateCapture implements IStateCapture {
         System.out.println("reflection done!!");
     }
 
+    public void fixingFList(List<String> fields) throws IOException {
+        setup();
+        String subxml0 = subxmlFold + "/0xml";
+        for(int index=0; index<fields.size(); index++) {
+            String fieldName = fields.get(index);
+            try {
+                System.out.println("field: " + fieldName);
+                String path0 = subxml0 + "/" + fieldName + ".xml";
+                String state0 = readFile(path0);
+                //XStream xstream = new XStream();
+                XStream xstream = getXStreamInstance();
+                Object ob_0 = xstream.fromXML(state0);
+
+                String className = fieldName.substring(0, fieldName.lastIndexOf("."));
+                String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1);
+                //System.out.println("subFieldName: " + subFieldName);
+                //System.out.println("className: " + className);
+
+                try{
+                    Class c = Class.forName(className);
+                    Field[] Flist = c.getDeclaredFields();
+                    for(int i=0; i< Flist.length; i++) {
+                        //System.out.println("Flist[i].getName(): " + Flist[i].getName());
+                        if(Flist[i].getName().equals(subFieldName)) {
+                            try{
+                                Flist[i].setAccessible(true);
+                                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                                modifiersField.setAccessible(true);
+                                modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                                Flist[i].set(null, ob_0);
+                                System.out.println("set!!!");
+
+                                String output = fieldName + " set\n";
+                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        StandardOpenOption.APPEND);
+                            }
+                            catch(Exception e) {
+                                System.out.println("exception in setting " +
+                                        "field with reflaction: " + e);
+                                String output = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        StandardOpenOption.APPEND);
+                            }
+                            break;
+                        }
+                    }
+                }
+                catch(Exception e){
+                    System.out.println("error in reflection: " + e);
+                }
+            }
+            catch(Exception e) {
+                System.out.println("error in xml deserialztion: " + e);
+                String output = fieldName + " deserializeError: " + e + "\n";
+                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                        StandardOpenOption.APPEND);
+            }
+        }
+
+        System.out.println("reflection done!!");
+    }
+
     public void capture() {
         setup();
         try {
