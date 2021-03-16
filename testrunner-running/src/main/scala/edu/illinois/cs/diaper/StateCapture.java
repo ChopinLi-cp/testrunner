@@ -1148,7 +1148,7 @@ public class StateCapture implements IStateCapture {
         xstream.omitField(java.lang.ClassLoader.class, "classes");
         //
         //com.sun.jmx.mbeanserver.ModifiableClassLoaderRepository.class;
-        try {
+        /*try {
             xstream.omitField(Class.forName("com.sun.jmx.mbeanserver.ClassLoaderRepositorySupport$LoaderEntry"), "loader");
             xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "allocationsTiny");
             xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "allocationsSmall");
@@ -1159,7 +1159,7 @@ public class StateCapture implements IStateCapture {
 
         catch(Exception ex) {
             System.out.println("error occur in Class.forName in getXStreamInstance: " + ex);
-        }
+        }*/
         xstream.omitField(java.lang.ref.SoftReference.class, "timestamp");
         xstream.omitField(java.lang.ref.SoftReference.class, "referent");
         xstream.omitField(java.lang.ref.Reference.class, "referent");
