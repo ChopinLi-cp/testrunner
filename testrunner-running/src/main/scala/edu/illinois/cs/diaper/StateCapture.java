@@ -5,6 +5,7 @@ import com.thoughtworks.xstream.converters.reflection.*;
 import com.thoughtworks.xstream.core.JVM;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
+import com.thoughtworks.xstream.security.AnyTypePermission;
 import edu.illinois.cs.diaper.agent.MainAgent;
 import edu.illinois.cs.diaper.DiaperLogger;
 
@@ -1137,6 +1138,7 @@ public class StateCapture implements IStateCapture {
 
 
         xstream.setMode(XStream.XPATH_ABSOLUTE_REFERENCES);
+        xstream.addPermission(AnyTypePermission.ANY);
         // Set fields to be omitted during serialization
 
         xstream.omitField(java.lang.Thread.class, "contextClassLoader");
