@@ -58,7 +58,7 @@ import javax.xml.xpath.XPathConstants;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.atomic.AtomicReference;
 
 public class StateCapture implements IStateCapture {
 
@@ -549,19 +549,35 @@ public class StateCapture implements IStateCapture {
         String diffFile = MainAgent.diffFieldFold + "/0.txt";
         try (BufferedReader br = new BufferedReader(new FileReader(diffFile))) {
             String s;
+            String another = "BEGIN";
             while ((s = br.readLine()) != null) {
                 try{
                     System.out.println("field in deserialize: " + s);
                     String path0 = subxml0 + "/" + s + ".xml";
                     String state0 = readFile(path0);
+                    another = "GETTING XSTREAN INSTANCE";
+                    Files.write(Paths.get(reflectionFile), another.getBytes(),
+                            StandardOpenOption.APPEND);
                     XStream xstream = getXStreamInstance();
+                    if(s.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
+                        another = another + "ENCRYPTOR:";
+                        AtomicReference atomicReference = new AtomicReference();
+                        xstream.setClassLoader(atomicReference.getClass().getClassLoader());
+                        another = another + " FINISH CHANGE";
+                        Files.write(Paths.get(reflectionFile), another.getBytes(),
+                            StandardOpenOption.APPEND);
+                    }
+                    //xstream.alias("AtomicReference", java.util.concurrent.atomic.AtomicReference.class);
                     Object ob_0 = xstream.fromXML(state0);
                     f2o_correct.put(s, ob_0);
-                    //System.out.println("ob_0: " + ob_0);
+                    System.out.println("ob_0: " + ob_0);
+                    another = another + "ob_0" + ob_0;
+                    Files.write(Paths.get(reflectionFile), another.getBytes(),
+                            StandardOpenOption.APPEND);
                 }
                 catch (Exception e) {
                     System.out.println("error in xml deserialztion: " + e);
-                    String output = s + " deserializeError: " + e + "\n";
+                    String output = s + " deserializeError: " + e + "\n" + another;
                     Files.write(Paths.get(reflectionFile), output.getBytes(),
                             StandardOpenOption.APPEND);
                 }
@@ -659,6 +675,10 @@ public class StateCapture implements IStateCapture {
                 String state0 = readFile(path0);
                 //XStream xstream = new XStream();
                 XStream xstream = getXStreamInstance();
+                if(fieldName.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
+                    AtomicReference atomicReference = new AtomicReference();
+                    xstream.setClassLoader(atomicReference.getClass().getClassLoader());
+                }
                 Object ob_0 = xstream.fromXML(state0);
 
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
@@ -719,6 +739,10 @@ public class StateCapture implements IStateCapture {
                 String state0 = readFile(path0);
                 //XStream xstream = new XStream();
                 XStream xstream = getXStreamInstance();
+                if(fieldName.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
+                    AtomicReference atomicReference = new AtomicReference();
+                    xstream.setClassLoader(atomicReference.getClass().getClassLoader());
+                }
                 Object ob_0 = xstream.fromXML(state0);
 
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
@@ -812,8 +836,17 @@ public class StateCapture implements IStateCapture {
             // Ignore classes in standard java to get top-level
             // TODO(gyori): make this read from file or config option
             String clz = c.getName();
-            if (clz.contains("java.")
-                || clz.contains("javax.")
+            if (clz.contains("java.")){
+                // if(!clz.equals("java.lang.ProcessEnvironment") && !clz.equals("java.lang.Runtime") &&
+                   // !clz.equals("java.lang.ProcessBuilder")){
+            //        System.out.println("NOTSKIP");
+            //     }
+            //     else{
+                    continue;
+                // }
+            }
+      
+            if (clz.contains("javax.")
                 || clz.contains("jdk.")
                 || clz.contains("scala.")
                 || clz.contains("sun.")
@@ -874,8 +907,10 @@ public class StateCapture implements IStateCapture {
                               // System.out.println("end");
                             }
                     } catch (NoClassDefFoundError e) {
+                        System.out.println("NoClassDefFoundError: " + fieldName);
                     	continue;
-                    } catch (Exception e) {
+                    } 
+                    catch (Exception e) {
                         System.out.println("error in capture real: " + e);
                         //e.printStackTrace();
                         continue;
@@ -1224,5 +1259,4 @@ public class StateCapture implements IStateCapture {
         File f = new File(path);
         return f.listFiles().length;
     }
-
 }
