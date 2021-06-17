@@ -39,7 +39,13 @@ public class CustomMapConverter extends MapConverter {
             // Give consistent name to elements (their types will be encoded as attribute)
             writeItemWithName("key", entry.getKey(), context, writer);
             writeItemWithName("value", entry.getValue(), context, writer);
-
+            
+            if (entry.getKey() instanceof String) {
+                String s = (String)entry.getKey();
+                if (s.contains("ratis.server.TestId")) {
+                    System.out.println("RATIS SERVER METRICS: " + entry.getValue());
+                }
+            }
             writer.endNode();
         }
     }

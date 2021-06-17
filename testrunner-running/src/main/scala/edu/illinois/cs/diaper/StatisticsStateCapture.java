@@ -51,8 +51,12 @@ public class StatisticsStateCapture extends StateCapture {
             // Ignore classes in standard java to get top-level
             // TODO(gyori): make this read from file or config option
             String clz = c.getName();
-            if (clz.contains("java.") 
-                || clz.contains("sun.") 
+            if (clz.contains("java.")){
+                if(!clz.equals("java.lang.ProcessEnvironment")){
+                    continue;
+                }
+            }
+            if (clz.contains("sun.") 
                 || clz.contains("edu.illinois.diaper") 
                 || clz.contains("diaper.com.") 
                 || clz.contains("diaper.org.")) {

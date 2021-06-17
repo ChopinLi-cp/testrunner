@@ -3,7 +3,10 @@ package edu.illinois.cs.diaper;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.reflection.*;
 import com.thoughtworks.xstream.core.JVM;
+import com.thoughtworks.xstream.io.xml.XppDriver;
 import com.thoughtworks.xstream.io.xml.DomDriver;
+import com.thoughtworks.xstream.io.xml.XmlFriendlyNameCoder;
+import com.thoughtworks.xstream.converters.extended.DynamicProxyConverter;
 
 import com.thoughtworks.xstream.security.AnyTypePermission;
 import edu.illinois.cs.diaper.agent.MainAgent;
@@ -13,6 +16,7 @@ import java.io.*;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Array; // new
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,6 +38,7 @@ import org.xmlunit.diff.Difference;
 import org.xmlunit.diff.ElementSelectors;
 
 import java.lang.Object;
+import java.lang.ref.Reference; // new
 
 import java.nio.charset.StandardCharsets;
 import org.apache.commons.io.FileUtils;
@@ -59,6 +64,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+
+// import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+// import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule;
+import com.fasterxml.jackson.dataformat.xml.*;
+// import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.*;
+// import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.*;
+import hudson.remoting.ClassFilter.*;
+import hudson.remoting.ClassFilter;
+// import hudson.remoting.ClassFilter.RegExpClassFilter;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 
 public class StateCapture implements IStateCapture {
 
@@ -96,6 +114,9 @@ public class StateCapture implements IStateCapture {
     public String diffFold;
     public String slug;
     public String reflectionFile;
+    // private static final Object ClassFilter;
+    // private static final Class[] loadedClasses0;
+    // private static final flag = false;
 
     static { 
         Properties p = System.getProperties();
@@ -140,6 +161,39 @@ public class StateCapture implements IStateCapture {
 
         whiteList = fileToSet(p, "whitelist");
         ignores = fileToSet(p, "ignores");
+        // Set<String> allFiledName = new HashSet<String>();
+        // Class[] loadedClasses1 = MainAgent.getInstrumentation().getAllLoadedClasses();
+        // if(loadedClasses1!= null) {loadedClasses0 = loadedClasses1;}
+        // else {loadedClasses0 = null;}
+        // boolean flag = false;
+        // Object instance = null;
+        // for (Class c : loadedClasses0) {
+        //     String clz = c.getName();
+        //     Set<Field> allFields = new HashSet<Field>();
+        //    try {
+        //        Field[] declaredFields = c.getDeclaredFields();
+        //        Field[] fields = c.getFields();
+        //        allFields.addAll(Arrays.asList(declaredFields));
+        //        allFields.addAll(Arrays.asList(fields));
+        //    } catch (NoClassDefFoundError e) {
+
+        //        continue;
+        //    }
+        //    for (Field f : allFields) {
+        //        String fieldName = getFieldFQN(f);
+        //        if ((fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+        //                            fieldName.equals("hudson.remoting.ClassFilter.STANDARD"))&&!flag){
+        //            try {instance = f.get(null);}
+        //            catch (IllegalAccessException ex){continue; }
+        //            // ClassFilter = instance;
+                    // System.out.println("HAHAHAHA:"+ClassFilter);
+        //            flag = true;
+        //            break;
+        //        }
+        //    }
+        //}
+        // ClassFilter = instance;
+        // System.out.println("HAHAHAHA:"+ClassFilter);
     }
 
     public static void awaitTermination() {
@@ -559,16 +613,23 @@ public class StateCapture implements IStateCapture {
                     Files.write(Paths.get(reflectionFile), another.getBytes(),
                             StandardOpenOption.APPEND);
                     XStream xstream = getXStreamInstance();
-                    if(s.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
-                        another = another + "ENCRYPTOR:";
-                        AtomicReference atomicReference = new AtomicReference();
-                        xstream.setClassLoader(atomicReference.getClass().getClassLoader());
-                        another = another + " FINISH CHANGE";
-                        Files.write(Paths.get(reflectionFile), another.getBytes(),
-                            StandardOpenOption.APPEND);
-                    }
-                    //xstream.alias("AtomicReference", java.util.concurrent.atomic.AtomicReference.class);
                     Object ob_0 = xstream.fromXML(state0);
+                    if(s.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                                     s.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                                     s.equals("hudson.remoting.ClassFilter.DEFAULT") || s.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
+                        JacksonXmlModule xmlModule = new JacksonXmlModule();
+                        xmlModule.setDefaultUseWrapper(false);
+                        ObjectMapper objectMapper = new XmlMapper();
+			objectMapper.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
+                        objectMapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
+                        ob_0 = objectMapper.readValue(state0, Object.class);
+                    }//xstream.alias("AtomicReference", java.util.concurrent.atomic.AtomicReference.class);
+                    if(s.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                                    s.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                                    s.equals("hudson.remoting.ClassFilter.DEFAULT"))
+		    {
+                        System.out.println("ENCOUNTER0:" + state0);
+		    }
                     f2o_correct.put(s, ob_0);
                     System.out.println("ob_0: " + ob_0);
                     another = another + "ob_0" + ob_0;
@@ -675,11 +736,36 @@ public class StateCapture implements IStateCapture {
                 String state0 = readFile(path0);
                 //XStream xstream = new XStream();
                 XStream xstream = getXStreamInstance();
-                if(fieldName.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
-                    AtomicReference atomicReference = new AtomicReference();
-                    xstream.setClassLoader(atomicReference.getClass().getClassLoader());
+                Object ob_0 = null;
+                if(fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                   fieldName.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                   fieldName.equals("hudson.remoting.ClassFilter.DEFAULT") || fieldName.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
+                    JacksonXmlModule xmlModule = new JacksonXmlModule();
+                    xmlModule.setDefaultUseWrapper(false);
+                    ObjectMapper objectMapper = new XmlMapper();
+	            objectMapper.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
+                    objectMapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
+                    ob_0 = objectMapper.readValue(state0, Object.class);
                 }
-                Object ob_0 = xstream.fromXML(state0);
+                // else if(fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                    //                 fieldName.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                      //               fieldName.equals("hudson.remoting.ClassFilter.DEFAULT"))
+                // {   
+                    //System.out.println("ENCOUNTER1:" + state0);
+                //     ob_0 = ClassFilter;
+                    // System.out.println("ENCOUNTER0:" + ob_0);
+                    // try {
+                   //     ClassFilter classfilter = ClassFilter.DEFAULT;
+                  //      ob_0 = classfilter;
+		//	System.out.println("ENCOUNTER1:" + ob_0);
+                    // } 
+		    // catch (ClassFilterException classFilterException) {
+                    //     classFilterException.printStackTrace();
+                    // }
+                //} 
+                else {
+                    ob_0 = xstream.fromXML(state0);
+                }
 
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
                 String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
@@ -703,6 +789,8 @@ public class StateCapture implements IStateCapture {
                                 String output = fieldName + " set\n";
                                 Files.write(Paths.get(reflectionFile), output.getBytes(),
                                         StandardOpenOption.APPEND);
+                                String s = xstream.toXML(Flist[i].get(null));
+                                Files.write(Paths.get("/home/lichengpeng/spring-holiday/iFixPlus/scripts_ifixplus/tmp0/retryCache/" + fieldName + ".xml"), s.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
@@ -739,11 +827,26 @@ public class StateCapture implements IStateCapture {
                 String state0 = readFile(path0);
                 //XStream xstream = new XStream();
                 XStream xstream = getXStreamInstance();
-                if(fieldName.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
-                    AtomicReference atomicReference = new AtomicReference();
-                    xstream.setClassLoader(atomicReference.getClass().getClassLoader());
+		Object ob_0;
+                if(fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                                     fieldName.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                                     fieldName.equals("hudson.remoting.ClassFilter.DEFAULT") || fieldName.equals("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
+                    JacksonXmlModule xmlModule = new JacksonXmlModule();
+                    xmlModule.setDefaultUseWrapper(false);
+                    ObjectMapper objectMapper = new XmlMapper();
+		    objectMapper.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
+                    objectMapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
+                    ob_0 = objectMapper.readValue(state0, Object.class);
                 }
-                Object ob_0 = xstream.fromXML(state0);
+		else {
+		    ob_0 = xstream.fromXML(state0);
+		}
+                if(fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                                    fieldName.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                                    fieldName.equals("hudson.remoting.ClassFilter.DEFAULT"))
+                {   
+                    System.out.println("ENCOUNTER2:" + state0);
+                }
 
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
                 String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1);
@@ -798,6 +901,7 @@ public class StateCapture implements IStateCapture {
         setup();
         try {
             capture_real();
+            // capture_real();
         }
         catch(Exception e) {
             System.out.println("error happened when doing capture real: " + e);
@@ -813,6 +917,10 @@ public class StateCapture implements IStateCapture {
      * @throws IOException
      */
     public void capture_real() throws IOException {
+        //XStream xstream0 = getXStreamInstance();
+	//System.out.println("XSTREAM: CHENGPENG");
+        //Object instance0 = xstream0.fromXML(xml);
+        //System.out.println("FINISH XSTREAM");
 
         //read whitelist;
         try (BufferedReader br = new BufferedReader(new FileReader(MainAgent.pkgFile))) {
@@ -830,20 +938,23 @@ public class StateCapture implements IStateCapture {
         String subxmlDir = createSubxmlFold();
 
         Set<String> allFiledName = new HashSet<String>();
-        Class[] loadedClasses = MainAgent.getInstrumentation().getAllLoadedClasses();
+        Class[] loadedClasses;
+        System.out.println("SUBXMLDIR: " + subxmlDir); 
+        // if (subxmlDir.contains("0xml")) {loadedClasses = loadedClasses0;}
+        loadedClasses = MainAgent.getInstrumentation().getAllLoadedClasses();
 
         for (Class c : loadedClasses) {
             // Ignore classes in standard java to get top-level
             // TODO(gyori): make this read from file or config option
             String clz = c.getName();
             if (clz.contains("java.")){
-                // if(!clz.equals("java.lang.ProcessEnvironment") && !clz.equals("java.lang.Runtime") &&
-                   // !clz.equals("java.lang.ProcessBuilder")){
+                if(!clz.equals("java.lang.ProcessEnvironment") && !clz.equals("java.lang.Runtime") &&
+                   !clz.equals("java.lang.ProcessBuilder")){
             //        System.out.println("NOTSKIP");
             //     }
             //     else{
                     continue;
-                // }
+                }
             }
       
             if (clz.contains("javax.")
@@ -869,8 +980,7 @@ public class StateCapture implements IStateCapture {
                 continue;
             }
             // prepare for the subxml fold
-
-
+           
             for (Field f : allFields) {
                 String fieldName = getFieldFQN(f);
 
@@ -884,31 +994,117 @@ public class StateCapture implements IStateCapture {
                     && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
                     try {
                         if (shouldCapture(f)) {
-                               allFiledName.add(fieldName);
-                               f.setAccessible(true);
+                            allFiledName.add(fieldName);
+                            f.setAccessible(true);
 
-                               //System.out.println("f.getType(): "+f.getType());
-                               Object instance = f.get(null);
-                               LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
-                               nameToInstance_temp.put(fieldName, instance);
+                            //System.out.println("f.getType(): "+f.getType());
+                            Object instance = f.get(null);
+                            // if(fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                            //         fieldName.equals("hudson.remoting.ClassFilter.STANDARD")){
+                            //     ClassFilter = instance;
+                            //     System.out.println("HAHAHAHA:"+ClassFilter);
+                            // }
+                            // if(subxmlDir.contains("1xml") &&(
+//fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                               // fieldName.equals("hudson.remoting.ClassFilter.STANDARD")
+                            //         fieldName.equals("hudson.remoting.ClassFilter.DEFAULT"))
+                            //   ){
+                            //     String xmlStr = "<hudson.remoting.ClassFilter_-1/>";
+                            //     XStream xstream = getXStreamInstance();
+                            //     instance = xstream.fromXML(xmlStr);
+                            // }
+                            // if (subxmlDir.contains("0xml") && (
+                                    // fieldName.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                            //         fieldName.equals("hudson.remoting.ClassFilter.DEFAULT") ||
+                            //         fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT"))){
+                            //     instance = ClassFilter;
+                            //     fixing(fieldName);
+                            // }
+                            LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
+                            nameToInstance_temp.put(fieldName, instance);
+                            dirty = false;
+                            serializeRoots(nameToInstance_temp);
+                            if(!dirty) {
+                                //System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
+                                //      fieldName);
+                                nameToInstance.put(fieldName, instance);
 
-                               dirty = false;
-                               serializeRoots(nameToInstance_temp);
-                               if(!dirty) {
-                                   //System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
-                                     //      fieldName);
-                                   nameToInstance.put(fieldName, instance);
-
-                                   String ob4field = serializeOBs(instance);
-                                   PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
-                                   writer.println(ob4field);
-                                   writer.close();
-                               }
-                              // System.out.println("end");
+                                String ob4field = serializeOBs(instance);
+                                PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
+                                writer.println(ob4field);
+                                writer.close();
                             }
+                            // System.out.println("end");
+                        }
                     } catch (NoClassDefFoundError e) {
+                        System.out.println("PREPARE OUTPUT:");
+                        e.printStackTrace();
                         System.out.println("NoClassDefFoundError: " + fieldName);
-                    	continue;
+                        if(!fieldName.equals("io.jboot.components.cache.JbootCacheManager.me") &&
+                           !fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") &&
+                           !fieldName.equals("hudson.remoting.ClassFilter.STANDARD") &&
+                           !fieldName.equals("hudson.remoting.ClassFilter.DEFAULT")){
+                            continue;
+                        }
+                        else{
+                            String xmlStr = "";
+                            XStream xstream = getXStreamInstance();
+                            if(fieldName.equals("io.jboot.components.cache.JbootCacheManager.me")) {
+                                xmlStr = "<io.jboot.components.cache.JbootCacheManager>\n" +
+                                        "  <cacheMap class=\"concurrent-hash-map\">\n" +
+                                        "    <entry>\n" +
+                                        "      <key class=\"string\">caffeine</key>\n" +
+                                        "      <value class=\"io.jboot.components.cache.caffeine.CaffeineCacheImpl\">\n" +
+                                        "        <cacheMap class=\"concurrent-hash-map\">\n" +
+                                        "          <entry>\n" +
+                                        "            <key class=\"string\">cachename</key>\n" +
+                                        "            <value class=\"com.github.benmanes.caffeine.cache.BoundedLocalCache$BoundedLocalManualCache\" resolves-to=\"com.github.benmanes.caffeine.cache.SerializationProxy\">\n" +
+                                        "              <async>false</async>\n" +
+                                        "              <expiresAfterAccessNanos>0</expiresAfterAccessNanos>\n" +
+                                        "              <expiresAfterWriteNanos>86400000000000</expiresAfterWriteNanos>\n" +
+                                        "              <isRecordingStats>false</isRecordingStats>\n" +
+                                        "              <maximumSize>-1</maximumSize>\n" +
+                                        "              <maximumWeight>-1</maximumWeight>\n" +
+                                        "              <refreshAfterWriteNanos>0</refreshAfterWriteNanos>\n" +
+                                        "              <softValues>false</softValues>\n" +
+                                        "              <ticker class=\"com.github.benmanes.caffeine.cache.SystemTicker\">INSTANCE</ticker>\n" +
+                                        "              <weakKeys>false</weakKeys>\n" +
+                                        "              <weakValues>false</weakValues>\n" +
+                                        "              <writer class=\"com.github.benmanes.caffeine.cache.DisabledWriter\">INSTANCE</writer>\n" +
+                                        "            </value>\n" +
+                                        "          </entry>\n" +
+                                        "        </cacheMap>\n" +
+                                        "      </value>\n" +
+                                        "    </entry>\n" +
+                                        "  </cacheMap>\n" +
+                                        "  <config>\n" +
+                                        "    <aopCacheLiveSeconds>0</aopCacheLiveSeconds>\n" +
+                                        "    <type>caffeine</type>\n" +
+                                        "  </config>\n" +
+                                        "</io.jboot.components.cache.JbootCacheManager>";
+                            }
+                            else if(fieldName.equals("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                                    fieldName.equals("hudson.remoting.ClassFilter.STANDARD")  ||
+                                    fieldName.equals("hudson.remoting.ClassFilter.DEFAULT")){
+                                xmlStr = "<hudson.remoting.ClassFilter_-1/>";
+                            }
+                            Object instance = xstream.fromXML(xmlStr);
+                            System.out.println("FAILING_ORDER");
+                            LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
+                            nameToInstance_temp.put(fieldName, instance);
+                            dirty = false;
+                            serializeRoots(nameToInstance_temp);
+                            if(!dirty) {
+                                //System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
+                                //      fieldName);
+                                nameToInstance.put(fieldName, instance);
+
+                                String ob4field = serializeOBs(instance);
+                                PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
+                                writer.println(ob4field);
+                                writer.close();
+                            }
+                        }
                     } 
                     catch (Exception e) {
                         System.out.println("error in capture real: " + e);
@@ -917,6 +1113,47 @@ public class StateCapture implements IStateCapture {
                     }
                 }
             }
+        }
+        try {
+            // Field f = Thread.class.getField("threadLocals");
+            Field f = Thread.class.getDeclaredField("threadLocals");
+            f.setAccessible(true);
+            Object t = f.get(Thread.currentThread());
+            // Object t = f.get(null);
+            System.out.println("OBJECT:" + t);
+            LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
+            nameToInstance_temp.put("java.lang.Thread.currentThread", t);
+            dirty = false;
+            serializeRoots(nameToInstance_temp);  
+            if (!dirty) { 
+                nameToInstance.put("java.lang.Thread.currentThread", t); 
+                String ob4field = serializeOBs(t);
+                PrintWriter writer = new PrintWriter(subxmlDir + "/" + "java.lang.Thread.currentThread" + ".xml", "UTF-8");
+                writer.println(ob4field);
+                writer.close();
+            }
+            allFiledName.add("java.lang.Thread.currentThread");
+            
+            // Class threadLocalMapClass = Class.forName("java.lang.ThreadLocal$ThreadLocalMap");
+            // Field tableField = threadLocalMapClass.getDeclaredField("table");
+            // tableField.setAccessible(true);
+            // Object table = tableField.get(t);
+            
+            /* Field referentField = Reference.class.getDeclaredField("referent");
+            referentField.setAccessible(true);
+            
+            for (int i = 0; i < Array.getLength(table); i++) {
+                Object entry = Array.get(table, i);
+                if (entry != null) {
+                    ThreadLocal threadLocal = (ThreadLocal) referentField.get(entry);
+                    threadLocal.remove();
+                }
+            }
+            f.set(Thread.currentThread(), null);
+            System.gc(); */
+        }
+        catch (Exception e) {
+            e.printStackTrace();
         }
         String serializedState = serializeRoots(nameToInstance);
         System.out.println("xmlFold: " + xmlFold);
@@ -1107,6 +1344,16 @@ public class StateCapture implements IStateCapture {
         //System.out.println(state);
         try {
             s = xstream.toXML(state);
+            if(state.containsKey("hudson.remoting.ClassFilter.CURRENT_DEFAULT") ||
+                                     state.containsKey("hudson.remoting.ClassFilter.STANDARD")  ||
+                                     state.containsKey("hudson.remoting.ClassFilter.DEFAULT") || state.containsKey("io.cloudslang.lang.entities.encryption.EncryptionProvider.encryptor")){
+                JacksonXmlModule xmlModule = new JacksonXmlModule();
+		xmlModule.setDefaultUseWrapper(false);
+		ObjectMapper objectMapper = new XmlMapper();
+		objectMapper.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
+                objectMapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
+                s = objectMapper.writeValueAsString(state);
+            } 
 
         } catch (Exception e) {
             //System.out.println("s in serializeRoots: " + s);
@@ -1136,8 +1383,21 @@ public class StateCapture implements IStateCapture {
         try {
             s = xstream.toXML(ob);
 
+            if(ob instanceof AtomicReference || ob instanceof ClassFilter){
+                JacksonXmlModule xmlModule = new JacksonXmlModule();
+                xmlModule.setDefaultUseWrapper(false);
+                ObjectMapper objectMapper = new XmlMapper();
+		objectMapper.setVisibility(PropertyAccessor.ALL, Visibility.NONE);
+                objectMapper.setVisibility(PropertyAccessor.FIELD, Visibility.ANY);
+                s = objectMapper.writeValueAsString(ob);
+            }
+
             s = sanitizeXmlChars(s);
-        } catch (Exception e) {
+        } catch (JsonProcessingException JPE) {
+	    dirty = true;
+            JPE.printStackTrace();
+	} 
+        catch (Exception e) {
             // In case serialization fails, mark the StateCapture for this test
             // as dirty, meaning it should be ignored
             System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&error: " + e);
@@ -1163,14 +1423,14 @@ public class StateCapture implements IStateCapture {
     }
 
     private XStream getXStreamInstance() {
-        //XStream xstream = new XStream(new DomDriver());
+        //XStream xstream = new XStream(new XppDriver(new XmlFriendlyNameCoder("_-", "_")));
         //XStream xstream = new XStream(new PureJavaReflectionProvider(new FieldDictionary(
               //  new AlphabeticalFieldkeySorter())),new DomDriver());
         //XStream xstream = new XStream(new Sun14ReflectionProvider(new FieldDictionary(
                //  new AlphabeticalFieldkeySorter())),new DomDriver());
         XStream xstream = new XStream(JVM.newReflectionProvider(new FieldDictionary(
-                new AlphabeticalFieldkeySorter())),new DomDriver());
-
+                new AlphabeticalFieldkeySorter())),new DomDriver("UTF-8", new XmlFriendlyNameCoder("_-", "_")));
+        //xStream = new XStream(new Xpp3Driver(new NoNameCoder()));
 
         xstream.setMode(XStream.XPATH_ABSOLUTE_REFERENCES);
         xstream.addPermission(AnyTypePermission.ANY);
@@ -1199,8 +1459,9 @@ public class StateCapture implements IStateCapture {
         xstream.omitField(java.lang.ref.SoftReference.class, "referent");
         xstream.omitField(java.lang.ref.Reference.class, "referent");
 
-        xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
-
+        // xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
+        //xstream.registerConverter(new DynamicProxyConverter(xstream.getMapper()));
+        //xstream.registerConverter(new NewConverter(), XStream.PROPRITY_VERY_HIGH - 1);
         /*
           String ignores[][] = new String[][] {
           {"com.squareup.wire.Wire", "messageAdapters"},
@@ -1244,7 +1505,7 @@ public class StateCapture implements IStateCapture {
 
     }
     
-    protected String getFieldFQN(Field f) {
+    protected static String getFieldFQN(Field f) {
         String clz = f.getDeclaringClass().getName();
         String fld = f.getName();
         return clz + "." + fld;
