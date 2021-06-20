@@ -590,9 +590,9 @@ public class StateCapture implements IStateCapture {
                         if(Flist[i].getName().equals(subFieldName)) {
                             try{
                                 Flist[i].setAccessible(true);
-                                Field modifiersField = Field.class.getDeclaredField("modifiers");
-                                modifiersField.setAccessible(true);
-                                modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                                // Field modifiersField = Field.class.getDeclaredField("modifiers");
+                                // modifiersField.setAccessible(true);
+                                // modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
                                 Flist[i].set(Flist[i].getType(), ob);
                                 //System.out.println("ob: " + ob);
                                 System.out.println("set!!!");
@@ -1217,7 +1217,7 @@ public class StateCapture implements IStateCapture {
 
     public String readFile(String path) throws IOException {
         File file = new File(path);
-        return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+        return FileUtils.readFileToString(file, "UTF-8");
     }
 
     int countFiles(String path) {
