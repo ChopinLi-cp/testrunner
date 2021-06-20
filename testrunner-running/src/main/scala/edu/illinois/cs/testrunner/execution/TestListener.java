@@ -38,7 +38,7 @@ public class TestListener extends RunListener {
 
     private String readFile(String path) throws IOException {
         File file = new File(path);
-        return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+        return FileUtils.readFileToString(file, "UTF-8");
     }
 
     @Override

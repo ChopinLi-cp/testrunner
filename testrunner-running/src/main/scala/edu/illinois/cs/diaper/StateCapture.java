@@ -326,7 +326,7 @@ public class StateCapture implements IStateCapture {
      * @param  beforeState  string representing the 'before' state
      * @param  beforeRoots  set of the root static fields for the 'before' state
      * @param  afterState   string representing the 'after' state
-     * @param  afterRoots   set of the root static fileds for the 'after' state
+     * @param  afterRoots   set of the root static fields for the 'after' state
      * @param  fileName     name of the output file in which we save the diff
      */
     private void recordDiff(String testname, String beforeState, Set<String> beforeRoots,
@@ -593,6 +593,15 @@ public class StateCapture implements IStateCapture {
                                 Field modifiersField = Field.class.getDeclaredField("modifiers");
                                 modifiersField.setAccessible(true);
                                 modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                            }
+                            catch(Exception e) {
+                                System.out.println("exception in setting " +
+                                        "field(private static) with reflection: " + e);
+                                String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
+                                        StandardOpenOption.APPEND);
+                            }
+                            try{
                                 Flist[i].set(Flist[i].getType(), ob);
                                 //System.out.println("ob: " + ob);
                                 System.out.println("set!!!");
@@ -602,9 +611,9 @@ public class StateCapture implements IStateCapture {
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
-                                        "field with reflaction: " + e);
-                                String output = fieldName + " reflectionError: " + e + "\n";
-                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        "field with reflection: " + e);
+                                String outputNormalError = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), outputNormalError.getBytes(),
                                         StandardOpenOption.APPEND);
                             }
                             break;
@@ -677,6 +686,15 @@ public class StateCapture implements IStateCapture {
                                 Field modifiersField = Field.class.getDeclaredField("modifiers");
                                 modifiersField.setAccessible(true);
                                 modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                            }
+                            catch(Exception e) {
+                                System.out.println("exception in setting " +
+                                        "field(private static) with reflection: " + e);
+                                String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
+                                        StandardOpenOption.APPEND);
+                            }
+                            try{
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
 
@@ -686,9 +704,9 @@ public class StateCapture implements IStateCapture {
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
-                                        "field with reflaction: " + e);
-                                String output = fieldName + " reflectionError: " + e + "\n";
-                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        "field with reflection: " + e);
+                                String outputNormalError = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), outputNormalError.getBytes(),
                                         StandardOpenOption.APPEND);
                             }
                             break;
@@ -737,6 +755,15 @@ public class StateCapture implements IStateCapture {
                                 Field modifiersField = Field.class.getDeclaredField("modifiers");
                                 modifiersField.setAccessible(true);
                                 modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                            }
+                            catch(Exception e) {
+                                System.out.println("exception in setting " +
+                                        "field(private static) with reflection: " + e);
+                                String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
+                                        StandardOpenOption.APPEND);
+                            }
+                            try{    
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
 
@@ -746,9 +773,9 @@ public class StateCapture implements IStateCapture {
                             }
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
-                                        "field with reflaction: " + e);
-                                String output = fieldName + " reflectionError: " + e + "\n";
-                                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                        "field with reflection: " + e);
+                                String outputNormalError = fieldName + " reflectionError: " + e + "\n";
+                                Files.write(Paths.get(reflectionFile), outputNormalError.getBytes(),
                                         StandardOpenOption.APPEND);
                             }
                             break;
@@ -805,7 +832,7 @@ public class StateCapture implements IStateCapture {
 
         String subxmlDir = createSubxmlFold();
 
-        Set<String> allFiledName = new HashSet<String>();
+        Set<String> allFieldName = new HashSet<String>();
         Class[] loadedClasses = MainAgent.getInstrumentation().getAllLoadedClasses();
 
         for (Class c : loadedClasses) {
@@ -851,7 +878,7 @@ public class StateCapture implements IStateCapture {
                     && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
                     try {
                         if (shouldCapture(f)) {
-                               allFiledName.add(fieldName);
+                               allFieldName.add(fieldName);
                                f.setAccessible(true);
 
                                //System.out.println("f.getType(): "+f.getType());
@@ -901,7 +928,7 @@ public class StateCapture implements IStateCapture {
 
         num = new File(MainAgent.fieldFold).listFiles().length;
         writer = new PrintWriter(MainAgent.fieldFold + "/" + num+ ".txt", "UTF-8");
-        for(String ff: allFiledName) {
+        for(String ff: allFieldName) {
             writer.println(ff);
         }
         writer.close();
@@ -1217,7 +1244,7 @@ public class StateCapture implements IStateCapture {
 
     public String readFile(String path) throws IOException {
         File file = new File(path);
-        return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+        return FileUtils.readFileToString(file, "UTF-8");
     }
 
     int countFiles(String path) {
