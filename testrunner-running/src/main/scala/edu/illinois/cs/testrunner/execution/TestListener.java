@@ -121,15 +121,15 @@ public class TestListener extends RunListener {
                         sc.fixing(diffField);
                     }
                     //reflect two fields
-                    /*else if(phase.split(" ").length == 4){
+                    else if(phase.split(" ").length >= 4){
                         StateCapture sc = new StateCapture(fullTestName);
+                        String[] tmpLists = phase.split(" ");
                         List<String> fields = new ArrayList<>();
-                        String diffField1 = phase.split(" ")[2];
-                        String diffField2 = phase.split(" ")[3];
-                        fields.add(diffField1);
-                        fields.add(diffField2);
+                        for(int i = 2 ; i < tmpLists.length ; i++) {
+                            fields.add(tmpLists[i]);
+                        }
                         sc.fixingFList(fields);
-                    }*/
+                    }
                 }
             }
 

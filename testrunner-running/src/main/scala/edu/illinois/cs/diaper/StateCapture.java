@@ -749,6 +749,19 @@ public class StateCapture implements IStateCapture {
                     Field[] Flist = c.getDeclaredFields();
                     for(int i=0; i< Flist.length; i++) {
                         //System.out.println("Flist[i].getName(): " + Flist[i].getName());
+                        try{
+                            Flist[i].setAccessible(true);
+                            Field modifiersField = Field.class.getDeclaredField("modifiers");
+                            modifiersField.setAccessible(true);
+                            modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                        }
+                        catch(Exception e) {
+                            System.out.println("exception in setting " +
+                                    "field(private static) with reflection: " + e);
+                            String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
+                            Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
+                                    StandardOpenOption.APPEND);
+                        }
                         if(Flist[i].getName().equals(subFieldName)) {
                             try{
                                 Flist[i].setAccessible(true);
@@ -848,18 +861,23 @@ public class StateCapture implements IStateCapture {
                 || clz.contains("org.custommonkey.xmlunit")
                 || clz.contains("org.junit")
                 || clz.contains("diaper.com.")
-                || clz.contains("diaper.org.")) {
+                || clz.contains("diaper.org.")
+                || clz.equals("com.openpojo.reflection.impl.AClassWithBadMethod__Generated_OpenPojo")) {
                 continue;
             }
 
             Set<Field> allFields = new HashSet<Field>();
             try {
+                System.out.println("CLASS: " + clz);
                 Field[] declaredFields = c.getDeclaredFields();
                 Field[] fields = c.getFields();
                 allFields.addAll(Arrays.asList(declaredFields));
                 allFields.addAll(Arrays.asList(fields));
             } catch (NoClassDefFoundError e) {
-
+                System.out.println("NoClassDefFoundError: " + clz + " EXCEPTION: " + e);
+                continue;
+            } catch (Exception exception) {
+                System.out.println("OtherError: " + clz + " EXCEPTION: " + exception);
                 continue;
             }
             // prepare for the subxml fold
