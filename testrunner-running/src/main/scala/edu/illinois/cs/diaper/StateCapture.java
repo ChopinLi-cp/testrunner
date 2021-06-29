@@ -12,6 +12,7 @@ import edu.illinois.cs.diaper.DiaperLogger;
 import java.io.*;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Modifier;
 
 import java.util.*;
@@ -602,8 +603,10 @@ public class StateCapture implements IStateCapture {
                                         StandardOpenOption.APPEND);
                             }
                             try{
+                                if(ob.getClass().equals(Constructor.class)) {
+                                    ((Constructor)ob).setAccessible(true);
+                                }
                                 Flist[i].set(Flist[i].getType(), ob);
-                                //System.out.println("ob: " + ob);
                                 System.out.println("set!!!");
                                 String output = fieldName + " set\n";
                                 Files.write(Paths.get(reflectionFile), output.getBytes(),
@@ -695,6 +698,9 @@ public class StateCapture implements IStateCapture {
                                         StandardOpenOption.APPEND);
                             }
                             try{
+                                if(ob_0.getClass().equals(Constructor.class)) {
+                                    ((Constructor)ob_0).setAccessible(true);
+                                }
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
 
@@ -748,20 +754,6 @@ public class StateCapture implements IStateCapture {
                     Class c = Class.forName(className);
                     Field[] Flist = c.getDeclaredFields();
                     for(int i=0; i< Flist.length; i++) {
-                        //System.out.println("Flist[i].getName(): " + Flist[i].getName());
-                        try{
-                            Flist[i].setAccessible(true);
-                            Field modifiersField = Field.class.getDeclaredField("modifiers");
-                            modifiersField.setAccessible(true);
-                            modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
-                        }
-                        catch(Exception e) {
-                            System.out.println("exception in setting " +
-                                    "field(private static) with reflection: " + e);
-                            String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
-                            Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
-                                    StandardOpenOption.APPEND);
-                        }
                         if(Flist[i].getName().equals(subFieldName)) {
                             try{
                                 Flist[i].setAccessible(true);
@@ -776,7 +768,10 @@ public class StateCapture implements IStateCapture {
                                 Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
                                         StandardOpenOption.APPEND);
                             }
-                            try{    
+                            try{
+                                if(ob_0.getClass().equals(Constructor.class)) {
+                                    ((Constructor)ob_0).setAccessible(true);
+                                }
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
 
