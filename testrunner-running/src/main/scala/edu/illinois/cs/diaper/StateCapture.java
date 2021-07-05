@@ -11,8 +11,9 @@ import edu.illinois.cs.diaper.DiaperLogger;
 
 import java.io.*;
 
+import java.lang.Object;
 import java.lang.reflect.Field;
-import java.lang.reflect.Constructor;
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Modifier;
 
 import java.util.*;
@@ -21,12 +22,16 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.project.MavenProject;
+import org.mockito.Mockito;
 
+import org.xml.sax.InputSource;
 import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Comparison.Detail;
 import org.xmlunit.diff.DefaultNodeMatcher;
@@ -34,15 +39,9 @@ import org.xmlunit.diff.Diff;
 import org.xmlunit.diff.Difference;
 import org.xmlunit.diff.ElementSelectors;
 
-import java.lang.Object;
-
-import java.nio.charset.StandardCharsets;
-import org.apache.commons.io.FileUtils;
-import org.w3c.dom.Document;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import org.xml.sax.InputSource;
 
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -52,6 +51,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.OutputKeys;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
@@ -555,10 +555,10 @@ public class StateCapture implements IStateCapture {
                     System.out.println("field in deserialize: " + s);
                     String path0 = subxml0 + "/" + s + ".xml";
                     String state0 = readFile(path0);
+
                     XStream xstream = getXStreamInstance();
                     Object ob_0 = xstream.fromXML(state0);
                     f2o_correct.put(s, ob_0);
-                    //System.out.println("ob_0: " + ob_0);
                 }
                 catch (Exception e) {
                     System.out.println("error in xml deserialztion: " + e);
@@ -603,8 +603,8 @@ public class StateCapture implements IStateCapture {
                                         StandardOpenOption.APPEND);
                             }
                             try{
-                                if(ob.getClass().equals(Constructor.class)) {
-                                    ((Constructor)ob).setAccessible(true);
+                                if(AccessibleObject.class.isAssignableFrom(ob.getClass())) {
+                                    ((AccessibleObject)ob).setAccessible(true);
                                 }
                                 Flist[i].set(Flist[i].getType(), ob);
                                 System.out.println("set!!!");
@@ -669,20 +669,15 @@ public class StateCapture implements IStateCapture {
                 System.out.println("field: " + fieldName);
                 String path0 = subxml0 + "/" + fieldName + ".xml";
                 String state0 = readFile(path0);
-                //XStream xstream = new XStream();
-                XStream xstream = getXStreamInstance();
-                Object ob_0 = xstream.fromXML(state0);
-
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
                 String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
-                //System.out.println("subFieldName: " + subFieldName);
-                //System.out.println("className: " + className);
+
+                Object ob_0;
 
                 try{
                     Class c = Class.forName(className);
                     Field[] Flist = c.getDeclaredFields();
                     for(int i=0; i< Flist.length; i++) {
-                        //System.out.println("Flist[i].getName(): " + Flist[i].getName());
                         if(Flist[i].getName().equals(subFieldName)) {
                             try{
                                 Flist[i].setAccessible(true);
@@ -698,8 +693,15 @@ public class StateCapture implements IStateCapture {
                                         StandardOpenOption.APPEND);
                             }
                             try{
-                                if(ob_0.getClass().equals(Constructor.class)) {
-                                    ((Constructor)ob_0).setAccessible(true);
+                                if(state0.startsWith("MOCK")) {
+                                    ob_0 = Mockito.mock(Flist[i].getType());
+                                }
+                                else {
+                                    XStream xstream = getXStreamInstance();
+                                    ob_0 = xstream.fromXML(state0);
+                                }
+                                if(AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
+                                    ((AccessibleObject)ob_0).setAccessible(true);
                                 }
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
@@ -741,14 +743,10 @@ public class StateCapture implements IStateCapture {
                 System.out.println("field: " + fieldName);
                 String path0 = subxml0 + "/" + fieldName + ".xml";
                 String state0 = readFile(path0);
-                //XStream xstream = new XStream();
-                XStream xstream = getXStreamInstance();
-                Object ob_0 = xstream.fromXML(state0);
-
                 String className = fieldName.substring(0, fieldName.lastIndexOf("."));
                 String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1);
-                //System.out.println("subFieldName: " + subFieldName);
-                //System.out.println("className: " + className);
+
+                Object ob_0;
 
                 try{
                     Class c = Class.forName(className);
@@ -769,8 +767,14 @@ public class StateCapture implements IStateCapture {
                                         StandardOpenOption.APPEND);
                             }
                             try{
-                                if(ob_0.getClass().equals(Constructor.class)) {
-                                    ((Constructor)ob_0).setAccessible(true);
+                                if(state0.startsWith("MOCK")) {
+                                    ob_0 = Mockito.mock(Flist[i].getType());
+                                } else {
+                                    XStream xstream = getXStreamInstance();
+                                    ob_0 = xstream.fromXML(state0);
+                                }
+                                if(AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
+                                    ((AccessibleObject)ob_0).setAccessible(true);
                                 }
                                 Flist[i].set(null, ob_0);
                                 System.out.println("set!!!");
@@ -849,6 +853,7 @@ public class StateCapture implements IStateCapture {
             String clz = c.getName();
             if (clz.contains("java.")
                 || clz.contains("javax.")
+                || clz.contains("javafx.")
                 || clz.contains("jdk.")
                 || clz.contains("scala.")
                 || clz.contains("sun.")
@@ -857,7 +862,9 @@ public class StateCapture implements IStateCapture {
                 || clz.contains("org.junit")
                 || clz.contains("diaper.com.")
                 || clz.contains("diaper.org.")
-                || clz.equals("com.openpojo.reflection.impl.AClassWithBadMethod__Generated_OpenPojo")) {
+                || clz.contains("com.apple.")
+                || clz.equals("com.openpojo.reflection.impl.AClassWithBadMethod__Generated_OpenPojo")
+                || clz.equals("org.apache.log4j.net.ZeroConfSupport")) {
                 continue;
             }
 
@@ -908,6 +915,9 @@ public class StateCapture implements IStateCapture {
 
                                    String ob4field = serializeOBs(instance);
                                    PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
+                                   if(Mockito.mockingDetails(instance).isMock()) {
+                                       writer.println("MOCK");
+                                   }
                                    writer.println(ob4field);
                                    writer.close();
                                }
