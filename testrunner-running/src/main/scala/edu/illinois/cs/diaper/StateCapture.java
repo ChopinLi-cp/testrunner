@@ -13,6 +13,7 @@ import java.io.*;
 
 import java.lang.Object;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Modifier;
 
@@ -28,6 +29,7 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.Files;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.maven.project.MavenProject;
 import org.mockito.Mockito;
 
@@ -91,7 +93,7 @@ public class StateCapture implements IStateCapture {
     private int xmlFileNum;
     private Set<String> diffFields = new HashSet<String> ();
     private Set<String> diffFields_filtered = new HashSet<String> ();
-    public String xmlFold;
+    // public String xmlFold;
     public String subxmlFold;
     public String rootFold;
     public String diffFold;
@@ -330,7 +332,7 @@ public class StateCapture implements IStateCapture {
      * @param  afterRoots   set of the root static fields for the 'after' state
      * @param  fileName     name of the output file in which we save the diff
      */
-    private void recordDiff(String testname, String beforeState, Set<String> beforeRoots,
+    /* private void recordDiff(String testname, String beforeState, Set<String> beforeRoots,
                                 String afterState, Set<String> afterRoots, String fileName) {
 
         // returns a new afterState only having the roots that are common with the beforeState
@@ -344,20 +346,20 @@ public class StateCapture implements IStateCapture {
             sb.append(statesAreSame);
             sb.append("\n");
 
-            /*if (!statesAreSame) {
-                writeToFile(fileName + "_" + testname.replaceAll(" ", "_")
-                        + "_before.xml", beforeState, false);
-                writeToFile(fileName + "_" + testname.replaceAll(" ", "_")
-                        + "_after.xml", afterState, false);
-            }*/
+            // if (!statesAreSame) {
+            //     writeToFile(fileName + "_" + testname.replaceAll(" ", "_")
+            //             + "_before.xml", beforeState, false);
+            //     writeToFile(fileName + "_" + testname.replaceAll(" ", "_")
+            //             + "_after.xml", afterState, false);
+            // }
 
-            ///*if (this.verbose) {
+            // if (this.verbose) {
             Diff diff = DiffBuilder.compare(beforeState).withTest(afterState).
                 withNodeMatcher(new DefaultNodeMatcher(
-                    /*ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
-                    .thenUse(ElementSelectors.byXPath("./key", ElementSelectors.byNameAndText))
-                    .elseUse(ElementSelectors.byName)
-                    .build()*/
+                    // ElementSelectors.conditionalBuilder().whenElementIsNamed("entry")
+                    // .thenUse(ElementSelectors.byXPath("./key", ElementSelectors.byNameAndText))
+                    // .elseUse(ElementSelectors.byName)
+                    // .build()
                     ElementSelectors.byName
                 ))
                 .checkForSimilar()
@@ -372,13 +374,13 @@ public class StateCapture implements IStateCapture {
                 makeDifferenceReport(difference, beforeState, sb);
                 sb.append("***********************\n");
             }
-            // }*/
+            // }
             writeToFile(fileName, sb.toString(), true);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    } */
 
     private void recordsubDiff(String testname, String beforeState,
                             String afterState, String fileName) {
@@ -606,7 +608,8 @@ public class StateCapture implements IStateCapture {
                                 if(AccessibleObject.class.isAssignableFrom(ob.getClass())) {
                                     ((AccessibleObject)ob).setAccessible(true);
                                 }
-                                Flist[i].set(Flist[i].getType(), ob);
+                                // Flist[i].set(Flist[i].getType(), ob);
+                                FieldUtils.writeField(Flist[i], Flist[i].getType(), ob, true);
                                 System.out.println("set!!!");
                                 String output = fieldName + " set\n";
                                 Files.write(Paths.get(reflectionFile), output.getBytes(),
@@ -638,13 +641,13 @@ public class StateCapture implements IStateCapture {
     }
 
     public void setup() {
-        xmlFold = MainAgent.xmlFold;
+        // xmlFold = MainAgent.xmlFold;
         subxmlFold = MainAgent.subxmlFold;
         rootFold = MainAgent.rootFold;
         diffFold = MainAgent.diffFold;
         slug = MainAgent.slug;
         reflectionFile = MainAgent.reflectionFold + "/0.txt";
-        xmlFileNum = new File(xmlFold).listFiles().length;
+        xmlFileNum = countDirNums(subxmlFold);
 
         System.out.println("xmlFileName: " + xmlFileNum);
 
@@ -693,17 +696,24 @@ public class StateCapture implements IStateCapture {
                                         StandardOpenOption.APPEND);
                             }
                             try{
-                                if(state0.startsWith("MOCK")) {
-                                    ob_0 = Mockito.mock(Flist[i].getType());
-                                }
-                                else {
-                                    XStream xstream = getXStreamInstance();
+                                XStream xstream = getXStreamInstance();
+                                ob_0 = Flist[i].get(null);
+                                try{
+                                    if(Mockito.mockingDetails(ob_0).isMock()) {
+                                        Method m = Mockito.class.getDeclaredMethod("reset", Object[].class);
+                                        m.invoke(null, new Object[]{new Object[]{ob_0}});
+                                    } else {
+                                        ob_0 = xstream.fromXML(state0);
+                                    }
+                                } catch (NoSuchMethodError NSME) {
                                     ob_0 = xstream.fromXML(state0);
+                                    System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
                                 }
                                 if(AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
                                     ((AccessibleObject)ob_0).setAccessible(true);
                                 }
-                                Flist[i].set(null, ob_0);
+                                // Flist[i].set(null, ob_0);
+                                FieldUtils.writeField(Flist[i], (Object)null, ob_0, true);
                                 System.out.println("set!!!");
 
                                 String output = fieldName + " set\n";
@@ -713,6 +723,7 @@ public class StateCapture implements IStateCapture {
                             catch(Exception e) {
                                 System.out.println("exception in setting " +
                                         "field with reflection: " + e);
+                                e.printStackTrace();
                                 String outputNormalError = fieldName + " reflectionError: " + e + "\n";
                                 Files.write(Paths.get(reflectionFile), outputNormalError.getBytes(),
                                         StandardOpenOption.APPEND);
@@ -767,16 +778,24 @@ public class StateCapture implements IStateCapture {
                                         StandardOpenOption.APPEND);
                             }
                             try{
-                                if(state0.startsWith("MOCK")) {
-                                    ob_0 = Mockito.mock(Flist[i].getType());
-                                } else {
-                                    XStream xstream = getXStreamInstance();
+                                XStream xstream = getXStreamInstance();
+                                ob_0 = Flist[i].get(null);
+                                try{
+                                    if(Mockito.mockingDetails(ob_0).isMock()) {
+                                        Method m = Mockito.class.getDeclaredMethod("reset", Object[].class);
+                                        m.invoke(null, new Object[]{new Object[]{ob_0}});
+                                    } else {
+                                        ob_0 = xstream.fromXML(state0);
+                                    }
+                                } catch (NoSuchMethodError NSME) {
                                     ob_0 = xstream.fromXML(state0);
+                                    System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
                                 }
                                 if(AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
                                     ((AccessibleObject)ob_0).setAccessible(true);
                                 }
-                                Flist[i].set(null, ob_0);
+                                // Flist[i].set(null, ob_0);
+                                FieldUtils.writeField(Flist[i], (Object)null, ob_0, true);
                                 System.out.println("set!!!");
 
                                 String output = fieldName + " set\n";
@@ -829,6 +848,7 @@ public class StateCapture implements IStateCapture {
      */
     public void capture_real() throws IOException {
 
+        System.out.println("begin to capture!!!");
         //read whitelist;
         try (BufferedReader br = new BufferedReader(new FileReader(MainAgent.pkgFile))) {
             String line;
@@ -851,7 +871,7 @@ public class StateCapture implements IStateCapture {
             // Ignore classes in standard java to get top-level
             // TODO(gyori): make this read from file or config option
             String clz = c.getName();
-            if (clz.contains("java.")
+            if ((clz.contains("java.") && !clz.startsWith("java.lang.System"))
                 || clz.contains("javax.")
                 || clz.contains("javafx.")
                 || clz.contains("jdk.")
@@ -861,10 +881,7 @@ public class StateCapture implements IStateCapture {
                 || clz.contains("org.custommonkey.xmlunit")
                 || clz.contains("org.junit")
                 || clz.contains("diaper.com.")
-                || clz.contains("diaper.org.")
-                || clz.contains("com.apple.")
-                || clz.equals("com.openpojo.reflection.impl.AClassWithBadMethod__Generated_OpenPojo")
-                || clz.equals("org.apache.log4j.net.ZeroConfSupport")) {
+                || clz.contains("diaper.org.")) {
                 continue;
             }
 
@@ -898,63 +915,73 @@ public class StateCapture implements IStateCapture {
                     && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
                     try {
                         if (shouldCapture(f)) {
-                               allFieldName.add(fieldName);
-                               f.setAccessible(true);
+                            allFieldName.add(fieldName);
+                            f.setAccessible(true);
 
-                               //System.out.println("f.getType(): "+f.getType());
-                               Object instance = f.get(null);
-                               LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
-                               nameToInstance_temp.put(fieldName, instance);
+                            //System.out.println("f.getType(): "+f.getType());
+                            Object instance = f.get(null);
+                            LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
+                            nameToInstance_temp.put(fieldName, instance);
 
-                               dirty = false;
-                               serializeRoots(nameToInstance_temp);
-                               if(!dirty) {
-                                   //System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
-                                     //      fieldName);
-                                   nameToInstance.put(fieldName, instance);
+                            dirty = false;
+                            serializeRoots(nameToInstance_temp);
+                            if (!dirty) {
+                                // System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
+                                //      fieldName);
+                                nameToInstance.put(fieldName, instance);
 
-                                   String ob4field = serializeOBs(instance);
-                                   PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
-                                   if(Mockito.mockingDetails(instance).isMock()) {
-                                       writer.println("MOCK");
-                                   }
-                                   writer.println(ob4field);
-                                   writer.close();
-                               }
-                              // System.out.println("end");
+                                String ob4field = serializeOBs(instance);
+                                PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
+                                writer.println(ob4field);
+                                writer.close();
                             }
-                    } catch (NoClassDefFoundError e) {
-                    	continue;
-                    } catch (Exception e) {
-                        System.out.println("error in capture real: " + e);
-                        //e.printStackTrace();
+                            System.out.println("ENDONEFIELD " + fieldName);
+                        }
+                    } catch (NoClassDefFoundError NCDFE) {
+                        System.out.println("error in capture real(NoClassDefFoundError): " + NCDFE);
+                        continue;
+                    }catch (OutOfMemoryError OFME) {
+                        System.out.println("error in capture real(OutOfMemoryError): " + OFME);
+                        continue;
+                    }  catch (Exception exception) {
+                        System.out.println("exception in capture real: " + exception);
                         continue;
                     }
                 }
+                System.out.println("ENDONEFIELD0 " + fieldName);
             }
+            System.out.println("ENDONECLASS " + clz);
         }
-        String serializedState = serializeRoots(nameToInstance);
-        System.out.println("xmlFold: " + xmlFold);
+        // String serializedState = serializeRoots(nameToInstance);
+        // System.out.println("xmlFold: " + xmlFold);
 
-        System.out.println("@@@@@@@@@@testname:" + testName);
-        int num = new File(xmlFold).listFiles().length;
+        // System.out.println("@@@@@@@@@@testname:" + testName);
+        // File [] subxmlList = new File(subxmlFold).listFiles();
 
-        PrintWriter writer = new PrintWriter(xmlFold + "/" + num+ ".xml", "UTF-8");
-        writer.println(serializedState);
-        writer.close();
+        // for (File file : subxmlList){
+        //     if (file.isDirectory() && file.listFiles().length > 0){
+        //         num ++;
+        //     }
+        // }
+        // int num = new File(xmlFold).listFiles().length;
 
-        writer = new PrintWriter(rootFold + "/" + num+ ".txt", "UTF-8");
+        // PrintWriter writer = new PrintWriter(xmlFold + "/" + num+ ".xml", "UTF-8");
+        // writer.println(serializedState);
+        // writer.close();
+        // num = new File(MainAgent.fieldFold).listFiles().length;
+        int num = countDirNums(subxmlFold)-1;
+	    PrintWriter writer = new PrintWriter(rootFold + "/" + num + ".txt", "UTF-8");
         for(String key: nameToInstance.keySet()) {
             writer.println(key);
         }
         writer.close();
 
-        num = new File(MainAgent.fieldFold).listFiles().length;
         writer = new PrintWriter(MainAgent.fieldFold + "/" + num+ ".txt", "UTF-8");
         for(String ff: allFieldName) {
             writer.println(ff);
         }
         writer.close();
+        System.out.println("end capture!!!");
 
     }
 
@@ -1003,7 +1030,7 @@ public class StateCapture implements IStateCapture {
         return subxmlDir;
     }
 
-    private void diffPairs() throws IOException {
+    /* private void diffPairs() throws IOException {
 
         String beforeState = readFile(xmlFold + "/0.xml");
         String afterState = readFile(xmlFold + "/1.xml");
@@ -1014,9 +1041,9 @@ public class StateCapture implements IStateCapture {
         String diffFileName = diffFold + "/diff";
         System.out.println("diffFilename: " + diffFileName);
         recordDiff(testName, beforeState, beforeRoots, afterState, afterRoots, diffFileName);
-    }
+    } */
 
-    private void makeDifferenceReport(Difference difference, String xmlDoc, StringBuilder sb) {
+    /* private void makeDifferenceReport(Difference difference, String xmlDoc, StringBuilder sb) {
         Detail controlNode = difference.getComparison().getControlDetails();
         Detail afterNode = difference.getComparison().getTestDetails();
 
@@ -1050,7 +1077,7 @@ public class StateCapture implements IStateCapture {
                 System.out.println("exception in makedifferencereport!!" + ex);
             }
         }
-    }
+    } */
 
     private void makeSubDifferenceReport(Difference difference, String xmlDoc, StringBuilder sb) {
         Detail controlNode = difference.getComparison().getControlDetails();
@@ -1122,23 +1149,26 @@ public class StateCapture implements IStateCapture {
         //System.out.println(state);
         try {
             s = xstream.toXML(state);
-
-        } catch (Exception e) {
-            //System.out.println("s in serializeRoots: " + s);
+        } catch (Exception exception) {
             // In case serialization fails, mark the StateCapture for this test
             // as dirty, meaning it should be ignored
-            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&toxml error: " );
-            e.printStackTrace();
+            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&toxml Exception: " );
+            exception.printStackTrace();
             dirty = true;
             //throw e;
+        } catch (OutOfMemoryError error) {
+            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&toxml Error: " + error);
+            dirty = true;
         }
 
         try{
             s = sanitizeXmlChars(s);
-        }
-        catch(Exception e) {
-            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&sanitizeXmlChars error: " );
-            e.printStackTrace();
+        } catch(Exception exception) {
+            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&sanitizeXmlChars Exception: " );
+            exception.printStackTrace();
+            dirty = true;
+        } catch (OutOfMemoryError error) {
+            System.out.println("!!!!!!!!!!!!!!!!!!!!&&&&&&&&&&&&&&&toxml Error: " + error);
             dirty = true;
         }
         return s;
@@ -1206,10 +1236,10 @@ public class StateCapture implements IStateCapture {
             xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "activeBytesHuge");
             xstream.omitField(Class.forName("io.netty.buffer.PoolArena"), "deallocationsHuge");
         }
-
         catch(Exception ex) {
             System.out.println("error occur in Class.forName in getXStreamInstance: " + ex);
         }*/
+
         xstream.omitField(java.lang.ref.SoftReference.class, "timestamp");
         xstream.omitField(java.lang.ref.SoftReference.class, "referent");
         xstream.omitField(java.lang.ref.Reference.class, "referent");
@@ -1273,6 +1303,17 @@ public class StateCapture implements IStateCapture {
     int countFiles(String path) {
         File f = new File(path);
         return f.listFiles().length;
+    }
+
+    int countDirNums(String path) {
+        File [] list = new File(path).listFiles();
+        int num = 0;
+        for (File file : list){
+            if (file.isDirectory()){
+                num ++;
+            }
+        }
+        return num;
     }
 
 }

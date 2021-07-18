@@ -21,6 +21,7 @@ public class CustomMapConverter extends MapConverter {
             writeNullItem(context, writer);
         } else {
             String clazz = mapper().serializedClass(item.getClass());
+            // String clazz = item.getClass().getName();
             ExtendedHierarchicalStreamWriterHelper.startNode(writer, name, item.getClass());
             writer.addAttribute("class", clazz);  // Map the class as an attribute to the node
             writeBareItem(item, context, writer);
@@ -32,15 +33,6 @@ public class CustomMapConverter extends MapConverter {
     public void marshal(final Object source, final HierarchicalStreamWriter writer, final MarshallingContext context) {
         Map map = (Map) source;
         String entryName = mapper().serializedClass(Map.Entry.class);
-
-        try {
-            if (map.getClass().equals(Class.forName("java.util.concurrent.ConcurrentHashMap"))) {
-                return;
-            }
-        }
-        catch (ClassNotFoundException exception) {
-            System.out.println("CLASS NOT FOUND FOR CONCURRENTHASHMAP!!!");
-        }
         for (Iterator iterator = map.entrySet().iterator(); iterator.hasNext();) {
             Map.Entry entry = (Map.Entry) iterator.next();
             ExtendedHierarchicalStreamWriterHelper.startNode(writer, entryName, entry.getClass());
