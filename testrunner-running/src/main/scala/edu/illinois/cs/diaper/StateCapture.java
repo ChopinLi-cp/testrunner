@@ -703,9 +703,13 @@ public class StateCapture implements IStateCapture {
                                         Method m = Mockito.class.getDeclaredMethod("reset", Object[].class);
                                         m.invoke(null, new Object[]{new Object[]{ob_0}});
                                     } else {
+                                        System.setProperty("currentClassInXStream", Flist[i].getDeclaringClass().getName());
+                                        System.setProperty("currentFieldInXStream", Flist[i].getName());
                                         ob_0 = xstream.fromXML(state0);
                                     }
                                 } catch (NoSuchMethodError NSME) {
+                                    System.setProperty("currentClassInXStream", Flist[i].getDeclaringClass().getName());
+                                    System.setProperty("currentFieldInXStream", Flist[i].getName());
                                     ob_0 = xstream.fromXML(state0);
                                     System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
                                 }
@@ -937,13 +941,13 @@ public class StateCapture implements IStateCapture {
                             }
                             System.out.println("ENDONEFIELD " + fieldName);
                         }
+                    } catch (OutOfMemoryError OFME) {
+                        System.out.println("error in capture real(OutOfMemoryError): " + OFME);
+                        continue;
                     } catch (NoClassDefFoundError NCDFE) {
                         System.out.println("error in capture real(NoClassDefFoundError): " + NCDFE);
                         continue;
-                    }catch (OutOfMemoryError OFME) {
-                        System.out.println("error in capture real(OutOfMemoryError): " + OFME);
-                        continue;
-                    }  catch (Exception exception) {
+                    } catch (Exception exception) {
                         System.out.println("exception in capture real: " + exception);
                         continue;
                     }
@@ -1245,7 +1249,7 @@ public class StateCapture implements IStateCapture {
         xstream.omitField(java.lang.ref.Reference.class, "referent");
 
         xstream.registerConverter(new CustomMapConverter(xstream.getMapper()));
-
+        
         /*
           String ignores[][] = new String[][] {
           {"com.squareup.wire.Wire", "messageAdapters"},
