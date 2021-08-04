@@ -974,7 +974,7 @@ public class StateCapture implements IStateCapture {
         // writer.close();
         // num = new File(MainAgent.fieldFold).listFiles().length;
         int num = countDirNums(subxmlFold)-1;
-	    PrintWriter writer = new PrintWriter(rootFold + "/" + num + ".txt", "UTF-8");
+        PrintWriter writer = new PrintWriter(rootFold + "/" + num + ".txt", "UTF-8");
         for(String key: nameToInstance.keySet()) {
             writer.println(key);
         }
