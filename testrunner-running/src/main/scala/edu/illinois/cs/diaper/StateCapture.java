@@ -199,6 +199,7 @@ public class StateCapture implements IStateCapture {
         } catch(ParserConfigurationException ex) {
             ex.printStackTrace();
         }
+        setup();
     }
 
     // Constructor to control if it's a class-level state capture
@@ -634,7 +635,6 @@ public class StateCapture implements IStateCapture {
     }
 
     public void reflectionAll() {
-        setup();
         LinkedHashMap<String, Object> f2o_correct = deserialize();
         reflection(f2o_correct);
         System.out.println("reflectionAll done!!");
@@ -654,7 +654,6 @@ public class StateCapture implements IStateCapture {
     }
 
     public void diffing() {
-        setup();
         try {
             //diffPairs();
             diffSub();
@@ -666,81 +665,77 @@ public class StateCapture implements IStateCapture {
     }
 
     public void fixing(String fieldName) throws IOException {
-        setup();
         String subxml0 = subxmlFold + "/0xml";
         try {
-                System.out.println("field: " + fieldName);
-                String path0 = subxml0 + "/" + fieldName + ".xml";
-                String state0 = readFile(path0);
-                String className = fieldName.substring(0, fieldName.lastIndexOf("."));
-                String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
+            System.out.println("field: " + fieldName);
+            String path0 = subxml0 + "/" + fieldName + ".xml";
+            String state0 = readFile(path0);
+            String className = fieldName.substring(0, fieldName.lastIndexOf("."));
+            String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
 
-                Object ob_0;
+            Object ob_0;
 
-                try{
-                    Class c = Class.forName(className);
-                    Field[] Flist = c.getDeclaredFields();
-                    for(int i=0; i< Flist.length; i++) {
-                        if(Flist[i].getName().equals(subFieldName)) {
+            try {
+                Class c = Class.forName(className);
+                Field[] Flist = c.getDeclaredFields();
+                for (int i=0; i< Flist.length; i++) {
+                    if (Flist[i].getName().equals(subFieldName)) {
+                        try {
+                            Flist[i].setAccessible(true);
+                            Field modifiersField = Field.class.getDeclaredField("modifiers");
+                            modifiersField.setAccessible(true);
+                            modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
+                        }
+                        catch (Exception e) {
+                            System.out.println("exception in setting " +
+                                    "field(private static) with reflection: " + e);
+                            String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
+                            Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
+                                    StandardOpenOption.APPEND);
+                        }
+                        try {
+                            XStream xstream = getXStreamInstance();
+                            ob_0 = Flist[i].get(null);
                             try{
-                                Flist[i].setAccessible(true);
-                                Field modifiersField = Field.class.getDeclaredField("modifiers");
-                                modifiersField.setAccessible(true);
-                                modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
-                            }
-                            catch(Exception e) {
-                                System.out.println("exception in setting " +
-                                        "field(private static) with reflection: " + e);
-                                String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
-                                Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
-                                        StandardOpenOption.APPEND);
-                            }
-                            try{
-                                XStream xstream = getXStreamInstance();
-                                ob_0 = Flist[i].get(null);
-                                try{
-                                    if(Mockito.mockingDetails(ob_0).isMock()) {
-                                        Method m = Mockito.class.getDeclaredMethod("reset", Object[].class);
-                                        m.invoke(null, new Object[]{new Object[]{ob_0}});
-                                    } else {
-                                        System.setProperty("currentClassInXStream", Flist[i].getDeclaringClass().getName());
-                                        System.setProperty("currentFieldInXStream", Flist[i].getName());
-                                        ob_0 = xstream.fromXML(state0);
-                                    }
-                                } catch (NoSuchMethodError NSME) {
+                                if (Mockito.mockingDetails(ob_0).isMock()) {
+                                    Method m = Mockito.class.getDeclaredMethod("reset", Object[].class);
+                                    m.invoke(null, new Object[]{new Object[]{ob_0}});
+                                } else {
                                     System.setProperty("currentClassInXStream", Flist[i].getDeclaringClass().getName());
                                     System.setProperty("currentFieldInXStream", Flist[i].getName());
                                     ob_0 = xstream.fromXML(state0);
-                                    System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
                                 }
-                                if(AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
-                                    ((AccessibleObject)ob_0).setAccessible(true);
-                                }
-                                // Flist[i].set(null, ob_0);
-                                FieldUtils.writeField(Flist[i], (Object)null, ob_0, true);
-                                System.out.println("set!!!");
+                            } catch (NoSuchMethodError NSME) {
+                                System.setProperty("currentClassInXStream", Flist[i].getDeclaringClass().getName());
+                                System.setProperty("currentFieldInXStream", Flist[i].getName());
+                                ob_0 = xstream.fromXML(state0);
+                                System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
+                            }
+                            if (AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
+                                ((AccessibleObject)ob_0).setAccessible(true);
+                            }
+                            // Flist[i].set(null, ob_0);
+                            FieldUtils.writeField(Flist[i], (Object)null, ob_0, true);
+                            System.out.println("set!!!");
 
-                                String output = fieldName + " set\n";
-                                Files.write(Paths.get(reflectionFile), output.getBytes(),
-                                        StandardOpenOption.APPEND);
-                            }
-                            catch(Exception e) {
-                                System.out.println("exception in setting " +
-                                        "field with reflection: " + e);
-                                e.printStackTrace();
-                                String outputNormalError = fieldName + " reflectionError: " + e + "\n";
-                                Files.write(Paths.get(reflectionFile), outputNormalError.getBytes(),
-                                        StandardOpenOption.APPEND);
-                            }
-                            break;
+                            String output = fieldName + " set\n";
+                            Files.write(Paths.get(reflectionFile), output.getBytes(),
+                                    StandardOpenOption.APPEND);
+                        } catch (Exception e) {
+                            System.out.println("exception in setting " +
+                                    "field with reflection: " + e);
+                            e.printStackTrace();
+                            String outputNormalError = fieldName + " reflectionError: " + e + "\n";
+                            Files.write(Paths.get(reflectionFile), outputNormalError.getBytes(),
+                                    StandardOpenOption.APPEND);
                         }
+                        break;
                     }
                 }
-                catch(Exception e){
-                    System.out.println("error in reflection: " + e);
-                }
-        }
-        catch(Exception e) {
+            } catch (Exception e){
+                System.out.println("error in reflection: " + e);
+            }
+        } catch(Exception e) {
             System.out.println("error in xml deserialztion: " + e);
             String output = fieldName + " deserializeError: " + e + "\n";
             Files.write(Paths.get(reflectionFile), output.getBytes(),
@@ -750,90 +745,16 @@ public class StateCapture implements IStateCapture {
     }
 
     public void fixingFList(List<String> fields) throws IOException {
-        setup();
         String subxml0 = subxmlFold + "/0xml";
-        for(int index=0; index<fields.size(); index++) {
+        for (int index = 0; index < fields.size(); index++) {
             String fieldName = fields.get(index);
-            try {
-                System.out.println("field: " + fieldName);
-                String path0 = subxml0 + "/" + fieldName + ".xml";
-                String state0 = readFile(path0);
-                String className = fieldName.substring(0, fieldName.lastIndexOf("."));
-                String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1);
-
-                Object ob_0;
-
-                try{
-                    Class c = Class.forName(className);
-                    Field[] Flist = c.getDeclaredFields();
-                    for(int i=0; i< Flist.length; i++) {
-                        if(Flist[i].getName().equals(subFieldName)) {
-                            try{
-                                Flist[i].setAccessible(true);
-                                Field modifiersField = Field.class.getDeclaredField("modifiers");
-                                modifiersField.setAccessible(true);
-                                modifiersField.setInt(Flist[i], Flist[i].getModifiers() & ~Modifier.FINAL);
-                            }
-                            catch(Exception e) {
-                                System.out.println("exception in setting " +
-                                        "field(private static) with reflection: " + e);
-                                String outputPrivateError = fieldName + " reflectionError: " + e + "\n";
-                                Files.write(Paths.get(reflectionFile), outputPrivateError.getBytes(),
-                                        StandardOpenOption.APPEND);
-                            }
-                            try{
-                                XStream xstream = getXStreamInstance();
-                                ob_0 = Flist[i].get(null);
-                                try{
-                                    if(Mockito.mockingDetails(ob_0).isMock()) {
-                                        Method m = Mockito.class.getDeclaredMethod("reset", Object[].class);
-                                        m.invoke(null, new Object[]{new Object[]{ob_0}});
-                                    } else {
-                                        ob_0 = xstream.fromXML(state0);
-                                    }
-                                } catch (NoSuchMethodError NSME) {
-                                    ob_0 = xstream.fromXML(state0);
-                                    System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
-                                }
-                                if(AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
-                                    ((AccessibleObject)ob_0).setAccessible(true);
-                                }
-                                // Flist[i].set(null, ob_0);
-                                FieldUtils.writeField(Flist[i], (Object)null, ob_0, true);
-                                System.out.println("set!!!");
-
-                                String output = fieldName + " set\n";
-                                Files.write(Paths.get(reflectionFile), output.getBytes(),
-                                        StandardOpenOption.APPEND);
-                            }
-                            catch(Exception e) {
-                                System.out.println("exception in setting " +
-                                        "field with reflection: " + e);
-                                String outputNormalError = fieldName + " reflectionError: " + e + "\n";
-                                Files.write(Paths.get(reflectionFile), outputNormalError.getBytes(),
-                                        StandardOpenOption.APPEND);
-                            }
-                            break;
-                        }
-                    }
-                }
-                catch(Exception e){
-                    System.out.println("error in reflection: " + e);
-                }
-            }
-            catch(Exception e) {
-                System.out.println("error in xml deserialztion: " + e);
-                String output = fieldName + " deserializeError: " + e + "\n";
-                Files.write(Paths.get(reflectionFile), output.getBytes(),
-                        StandardOpenOption.APPEND);
-            }
+            fixing(fieldName);
         }
 
         System.out.println("reflection done!!");
     }
 
     public void capture() {
-        setup();
         try {
             capture_real();
         }
