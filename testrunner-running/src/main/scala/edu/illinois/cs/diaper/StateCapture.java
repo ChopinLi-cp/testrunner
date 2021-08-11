@@ -3,6 +3,7 @@ package edu.illinois.cs.diaper;
 import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.converters.reflection.*;
 import com.thoughtworks.xstream.core.JVM;
+import com.thoughtworks.xstream.core.UnmarshalChain;
 import com.thoughtworks.xstream.io.xml.DomDriver;
 
 import com.thoughtworks.xstream.security.AnyTypePermission;
@@ -703,11 +704,15 @@ public class StateCapture implements IStateCapture {
                                 } else {
                                     System.setProperty("currentClassInXStream", Flist[i].getDeclaringClass().getName());
                                     System.setProperty("currentFieldInXStream", Flist[i].getName());
+                                    UnmarshalChain.reset();
+                                    UnmarshalChain.initializeChain(Flist[i].getDeclaringClass().getName(), Flist[i].getName());
                                     ob_0 = xstream.fromXML(state0);
                                 }
                             } catch (NoSuchMethodError NSME) {
                                 System.setProperty("currentClassInXStream", Flist[i].getDeclaringClass().getName());
                                 System.setProperty("currentFieldInXStream", Flist[i].getName());
+                                UnmarshalChain.reset();
+                                UnmarshalChain.initializeChain(Flist[i].getDeclaringClass().getName(), Flist[i].getName());
                                 ob_0 = xstream.fromXML(state0);
                                 System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
                             }
