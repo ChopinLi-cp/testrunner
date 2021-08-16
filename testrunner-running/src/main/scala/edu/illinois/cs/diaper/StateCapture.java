@@ -697,6 +697,10 @@ public class StateCapture implements IStateCapture {
                         try {
                             XStream xstream = getXStreamInstance();
                             ob_0 = Flist[i].get(null);
+                            boolean threadLocal = false;
+                            if (ob_0 instanceof ThreadLocal) {
+                                threadLocal = true;
+                            }
                             try{
                                 if (Mockito.mockingDetails(ob_0).isMock()) {
                                     Method m = Mockito.class.getDeclaredMethod("reset", Object[].class);
@@ -718,6 +722,11 @@ public class StateCapture implements IStateCapture {
                             }
                             if (AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
                                 ((AccessibleObject)ob_0).setAccessible(true);
+                            }
+                            if (threadLocal) {
+                                Object tmp = Flist[i].get(null);
+                                ((ThreadLocal)tmp).set(ob_0);
+                                ob_0 = tmp;
                             }
                             // Flist[i].set(null, ob_0);
                             FieldUtils.writeField(Flist[i], (Object)null, ob_0, true);
@@ -761,7 +770,12 @@ public class StateCapture implements IStateCapture {
 
     public void capture() {
         try {
-            capture_real();
+            String phase = readFile(MainAgent.tmpfile);
+            if (!phase.equals("2tmp")) {
+                capture_real();
+            } else {
+                capture_class();
+            }
         }
         catch(Exception e) {
             System.out.println("error happened when doing capture real: " + e);
@@ -777,9 +791,11 @@ public class StateCapture implements IStateCapture {
      * @throws IOException
      */
     public void capture_real() throws IOException {
-
         System.out.println("begin to capture!!!");
-        //read whitelist;
+
+        String phase = readFile(MainAgent.tmpfile);
+
+        // read whitelist;
         try (BufferedReader br = new BufferedReader(new FileReader(MainAgent.pkgFile))) {
             String line;
             while ((line = br.readLine()) != null) {
@@ -796,13 +812,33 @@ public class StateCapture implements IStateCapture {
 
         Set<String> allFieldName = new HashSet<String>();
         Class[] loadedClasses = MainAgent.getInstrumentation().getAllLoadedClasses();
-
+        if (phase.equals("3")) {
+            try {
+                List<Class> list = new ArrayList(Arrays.asList(loadedClasses));
+                String tmp2Path = rootFold + "/2tmp.txt";
+                Set<String> tmp2Classes = File2SetString(tmp2Path);
+                System.out.println("tmp2Classes: " + tmp2Classes);
+                for (String key : tmp2Classes) {
+                    try {
+                        Class tmp = Class.forName(key);
+                        list.add(0, tmp);
+                    } catch (ClassNotFoundException CNFE) {
+                        continue;
+                    }
+                }
+                Class[] arrayClasses = new Class[list.size()];
+                list.toArray(arrayClasses);
+                loadedClasses = arrayClasses;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         for (Class c : loadedClasses) {
             // Ignore classes in standard java to get top-level
             // TODO(gyori): make this read from file or config option
             String clz = c.getName();
             if ((clz.contains("java.") && !clz.startsWith("java.lang.System"))
-                || clz.contains("javax.")
+                || (clz.contains("javax.") && !clz.startsWith("javax.cache.Caching"))
                 || clz.contains("javafx.")
                 || clz.contains("jdk.")
                 || clz.contains("scala.")
@@ -849,7 +885,18 @@ public class StateCapture implements IStateCapture {
                             f.setAccessible(true);
 
                             //System.out.println("f.getType(): "+f.getType());
-                            Object instance = f.get(null);
+                            Object instance;
+                            try {
+                                instance = f.get(null);
+                            } catch (NoClassDefFoundError NCDFE) {
+                                instance = null;
+                                System.out.println("error in capture real(NoClassDefFoundError): " + NCDFE);
+                                NCDFE.printStackTrace();
+                            }
+                            if(instance instanceof ThreadLocal) {
+                                instance = ((ThreadLocal)instance).get();
+                            }
+
                             LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
                             nameToInstance_temp.put(fieldName, instance);
 
@@ -899,19 +946,72 @@ public class StateCapture implements IStateCapture {
         // writer.println(serializedState);
         // writer.close();
         // num = new File(MainAgent.fieldFold).listFiles().length;
-        int num = countDirNums(subxmlFold)-1;
+        int num = countDirNums(subxmlFold) - 1;
         PrintWriter writer = new PrintWriter(rootFold + "/" + num + ".txt", "UTF-8");
-        for(String key: nameToInstance.keySet()) {
+        for (String key : nameToInstance.keySet()) {
             writer.println(key);
         }
         writer.close();
 
-        writer = new PrintWriter(MainAgent.fieldFold + "/" + num+ ".txt", "UTF-8");
-        for(String ff: allFieldName) {
+        writer = new PrintWriter(MainAgent.fieldFold + "/" + num + ".txt", "UTF-8");
+        for (String ff : allFieldName) {
             writer.println(ff);
         }
         writer.close();
         System.out.println("end capture!!!");
+
+    }
+
+    /**
+     * Adds the current loadable classes to the current class list in 2tmp.txt file in the phase 2tmp.
+     * @throws IOException
+     */
+    public void capture_class() throws IOException {
+        System.out.println("begin to capture!!!");
+
+        String phase = readFile(MainAgent.tmpfile);
+
+        // read whitelist;
+        try (BufferedReader br = new BufferedReader(new FileReader(MainAgent.pkgFile))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                whiteList.add(line);
+            }
+        }
+        catch (Exception e) {
+            System.out.println("error while read pkg-filter file!!!");
+            return;
+        }
+
+        // get all loadable classes
+        Class[] loadedClasses = MainAgent.getInstrumentation().getAllLoadedClasses();
+        Set<String> classes = new HashSet<>();
+        for (Class c : loadedClasses) {
+            String clz = c.getName();
+            if ((clz.contains("java.") && !clz.startsWith("java.lang.System"))
+                    || (clz.contains("javax.") && !clz.startsWith("javax.cache.Caching"))
+                    || clz.contains("javafx.")
+                    || clz.contains("jdk.")
+                    || clz.contains("scala.")
+                    || clz.contains("sun.")
+                    || clz.contains("edu.illinois.cs")
+                    || clz.contains("org.custommonkey.xmlunit")
+                    || clz.contains("org.junit")
+                    || clz.contains("diaper.com.")
+                    || clz.contains("diaper.org.")) {
+                continue;
+            }
+            classes.add(clz);
+        }
+
+        // write to the 2tmp.txt file
+        PrintWriter writer = new PrintWriter(rootFold + "/" + "2tmp.txt", "UTF-8");
+        for (String str : classes) {
+            writer.println(str);
+        }
+        writer.close();
+
+        System.out.println("end capture_class!!!");
 
     }
 

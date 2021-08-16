@@ -134,7 +134,7 @@ public class TestListener extends RunListener {
             }
 
         if(MainAgent.targetTestName.equals(fullTestName)) {
-            if(phase.equals("2")) {
+            if(phase.equals("2") || phase.equals("2tmp")) {
                 System.out.println("MainAgent.targetTestName: " + MainAgent.targetTestName +
                         " fullTestName: " + fullTestName);
                 System.out.println("phase: " + phase);
