@@ -57,6 +57,18 @@ public class JUnitTestRunner extends BlockJUnit4ClassRunner {
         return methods;
     }
 
+    private static Object testObj;
+
+    public static Object getTestObj() {
+        return testObj;
+    }
+
+    @Override
+    protected Object createTest() {
+        testObj = super.createTest();
+        return testObj;
+    }
+
     private final Set<String> ranBeforeClassSet = new HashSet<>();
     private final List<JUnitTest> tests = new ArrayList<>();
 
