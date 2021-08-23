@@ -12,6 +12,7 @@ import edu.illinois.cs.diaper.DiaperLogger;
 
 import java.io.*;
 
+import java.lang.annotation.Annotation;
 import java.lang.Object;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Properties;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -488,10 +490,18 @@ public class StateCapture implements IStateCapture {
             String path1 = subxml1 + "/" + s + ".xml";
             String state0 = ""; String state1 = "";
             File file0 = new File(path0);
-            if(!file0.exists())
+            if(!file0.exists() && !s.startsWith("java.lang.System.props."))
+
                 System.out.println("the field name " + s + " exists in the afterRoot " +
                         "but does not exist in the beforeRoot");
             else {
+                if(!file0.exists() && s.startsWith("java.lang.System.props.")) {
+                    PrintWriter writer = new PrintWriter(subxml0 + "/" + s + ".xml", "UTF-8");
+                    String content = "NEEDTOCLEAR";
+                    String ob4field = serializeOBs(content);
+                    writer.println(ob4field);
+                    writer.close();
+                }
                 try{
                     state0 = readFile(path0);
                     state1 = readFile(path1);
@@ -674,7 +684,11 @@ public class StateCapture implements IStateCapture {
             String className = fieldName.substring(0, fieldName.lastIndexOf("."));
             String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
 
+            if (className.contains("java.lang.System.props")) {
+                return;
+            }
             Object ob_0;
+            XStream xstream = getXStreamInstance();
 
             try {
                 Class c = Class.forName(className);
@@ -695,7 +709,6 @@ public class StateCapture implements IStateCapture {
                                     StandardOpenOption.APPEND);
                         }
                         try {
-                            XStream xstream = getXStreamInstance();
                             ob_0 = Flist[i].get(null);
                             boolean threadLocal = false;
                             if (ob_0 instanceof ThreadLocal) {
@@ -720,8 +733,12 @@ public class StateCapture implements IStateCapture {
                                 ob_0 = xstream.fromXML(state0);
                                 System.out.println("NOSUCHMETHOD ERROR(Mockito.mockingDetails): " + NSME);
                             }
-                            if (AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
-                                ((AccessibleObject)ob_0).setAccessible(true);
+                            try {
+                                if (AccessibleObject.class.isAssignableFrom(ob_0.getClass())) {
+                                    ((AccessibleObject) ob_0).setAccessible(true);
+                                }
+                            } catch (NullPointerException NPEX) {
+                                NPEX.printStackTrace();
                             }
                             if (threadLocal) {
                                 Object tmp = Flist[i].get(null);
@@ -759,10 +776,78 @@ public class StateCapture implements IStateCapture {
     }
 
     public void fixingFList(List<String> fields) throws IOException {
+
         String subxml0 = subxmlFold + "/0xml";
+        String pathOfProps = subxml0 + "/java.lang.System.props.xml";
+        String stateOfProps = readFile(pathOfProps);
+        Properties propsOfFailingOrder = new Properties();
+        boolean containProps = false;
+        try {
+            Class c = Class.forName("java.lang.System");
+            Field props = c.getDeclaredField("props");
+            props.setAccessible(true);
+            propsOfFailingOrder = (Properties) props.get(null);
+        } catch (Exception e) {
+            System.out.println("Props are not captured when running the failing order.");
+            e.printStackTrace();
+        }
+
         for (int index = 0; index < fields.size(); index++) {
             String fieldName = fields.get(index);
-            fixing(fieldName);
+            if (fieldName.startsWith("java.lang.System.props.")) {
+                containProps = true;
+                System.out.println("PROPSNAME: " + index + " - " + fieldName);
+                String path0 = subxml0 + "/" + fieldName + ".xml";
+                String state0 = readFile(path0);
+                String subFieldName = fieldName.substring(fieldName.lastIndexOf("props.")+6, fieldName.length());
+
+                Object simpleProp;
+                XStream xstream = getXStreamInstance();
+
+                try {
+                    simpleProp = (String) xstream.fromXML(state0);
+                    if(simpleProp.equals("NEEDTOCLEAR")) {
+                        System.out.println("CLEAR: " + simpleProp + " - " + subFieldName);
+                        propsOfFailingOrder.remove(subFieldName);
+                    }
+                    else {
+                        System.out.println("CHANGE: " + simpleProp + " - " + subFieldName);
+                        propsOfFailingOrder.setProperty(subFieldName, (String) simpleProp);
+                    }
+                }
+                catch(Exception e) {
+                    System.out.println("exception in setting " +
+                            "field props with reflaction: " + e);
+                    String output = fieldName + " reflectionError: " + e + "\n";
+                    Files.write(Paths.get(reflectionFile), output.getBytes(),
+                            StandardOpenOption.APPEND);
+                }
+            }
+            else if (fieldName.startsWith("java.lang.System.props.")) {
+                continue;
+            }
+            else {
+                fixing(fieldName);
+            }
+        }
+        if (containProps) {
+            try {
+                Class c = Class.forName("java.lang.System");
+                Field props = c.getDeclaredField("props");
+                FieldUtils.writeField(props, (Object)null, propsOfFailingOrder, true);
+                System.out.println("Props set!!!");
+
+                String output =  "props set\n";
+                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                        StandardOpenOption.APPEND);
+            }
+            catch(Exception e) {
+                System.out.println("exception in setting " +
+                        "field props with reflection: " + e);
+                String output = "props reflectionError: " + e + "\n";
+                Files.write(Paths.get(reflectionFile), output.getBytes(),
+                        StandardOpenOption.APPEND);
+            }
         }
 
         System.out.println("reflection done!!");
@@ -824,6 +909,8 @@ public class StateCapture implements IStateCapture {
                         list.add(0, tmp);
                     } catch (ClassNotFoundException CNFE) {
                         continue;
+                    } catch (NoClassDefFoundError NCDFE) {
+                        continue;
                     }
                 }
                 Class[] arrayClasses = new Class[list.size()];
@@ -871,11 +958,20 @@ public class StateCapture implements IStateCapture {
             for (Field f : allFields) {
                 String fieldName = getFieldFQN(f);
 
+                String subFieldName = fieldName.substring(fieldName.lastIndexOf(".")+1, fieldName.length());
                 //System.out.println("$$$$$$$$$$$$fieldName: " + fieldName);
                 if (ignores.contains(fieldName)) {
                     //System.out.println("$$$$$$$$$$$$IGNORE$$$$$$$$ fieldName: " + fieldName);
                     continue;
                 }
+                /* boolean hasAnnotation = false;
+                for (Annotation a : f.getDeclaredAnnotations()) {
+                    if (a.annotationType().equals(Class.forName("org.springframework.beans.factory.annotation.Autowired"))) {
+                        hasAnnotation = true;
+                        break;
+                    }
+                }
+                System.out.println("FOUND: " + hasAnnotation); */
                 // if a field is final and has a primitive type there's no point to capture it.
                 if (Modifier.isStatic(f.getModifiers())
                     && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
@@ -896,7 +992,6 @@ public class StateCapture implements IStateCapture {
                             if(instance instanceof ThreadLocal) {
                                 instance = ((ThreadLocal)instance).get();
                             }
-
                             LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
                             nameToInstance_temp.put(fieldName, instance);
 
@@ -927,8 +1022,53 @@ public class StateCapture implements IStateCapture {
                 }
                 System.out.println("ENDONEFIELD0 " + fieldName);
             }
-            System.out.println("ENDONECLASS " + clz);
+            if (clz.equals("java.lang.System")) {
+                Object instance;
+                try {
+                    Field props = c.getDeclaredField("props");
+                    props.setAccessible(true);
+                    instance = props.get(null);
+                    System.out.println("REACHPROPS");
+                } catch (NoClassDefFoundError | NoSuchFieldException | IllegalAccessException e) {
+                    instance = null;
+                    e.printStackTrace();
+                }
+                // Properties properties = (Properties instance).getProperties();
+                for (Map.Entry<Object, Object> e : ((Properties) instance).entrySet()) {
+                    String fieldKey = "java.lang.System.props." + e.getKey();
+                    allFieldName.add(fieldKey);
+                    LinkedHashMap<String, Object> nameToInstance_temp = new LinkedHashMap<String, Object>();
+                    // Properties tmpProps = new Properties();
+                    // tmpProps.setProperty(e.getKey(), e.getValue());
+                    Object value = e.getValue();
+                    nameToInstance_temp.put(fieldKey, value);
+
+                    dirty = false;
+                    serializeRoots(nameToInstance_temp);
+                    if (!dirty) {
+                        // System.out.println("nameToInstance^^^^^^^^^^^^^^^^fieldName: " +
+                        //      fieldName);
+                        nameToInstance.put(fieldKey, value);
+
+                        String ob4field = serializeOBs(value);
+                        PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldKey + ".xml", "UTF-8");
+                        writer.println(ob4field);
+                        writer.close();
+                    }
+                    System.out.println("ENDONEFIELD " + fieldKey);
+                }
+            }
+            System.out.println("ENDPROPS");
         }
+        /* String serializedState = serializeRoots(nameToInstance);
+        System.out.println("xmlFold: " + xmlFold);
+
+        System.out.println("@@@@@@@@@@testname:" + testName);
+        int num0 = new File(xmlFold).listFiles().length;
+
+        PrintWriter writer0 = new PrintWriter(xmlFold + "/" + num0+ ".xml", "UTF-8");
+        writer0.println(serializedState);
+        writer0.close(); */
         // String serializedState = serializeRoots(nameToInstance);
         // System.out.println("xmlFold: " + xmlFold);
 

@@ -65,7 +65,11 @@ public class JUnitTestRunner extends BlockJUnit4ClassRunner {
 
     @Override
     protected Object createTest() {
-        testObj = super.createTest();
+        try {
+            testObj = super.createTest();
+        } catch (Exception e) {
+            System.out.println("EXCEPTION When creating the test!");
+        }
         return testObj;
     }
 
