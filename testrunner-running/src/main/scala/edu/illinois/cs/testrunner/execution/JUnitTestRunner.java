@@ -57,20 +57,10 @@ public class JUnitTestRunner extends BlockJUnit4ClassRunner {
         return methods;
     }
 
-    private static Object testObj;
+    private static Map<String, Object> testObjMap = new HashMap<>();
 
-    public static Object getTestObj() {
-        return testObj;
-    }
-
-    @Override
-    protected Object createTest() {
-        try {
-            testObj = super.createTest();
-        } catch (Exception e) {
-            System.out.println("EXCEPTION When creating the test!");
-        }
-        return testObj;
+    public static Map<String, Object> getTestObjMap() {
+        return testObjMap;
     }
 
     private final Set<String> ranBeforeClassSet = new HashSet<>();
@@ -81,6 +71,7 @@ public class JUnitTestRunner extends BlockJUnit4ClassRunner {
     public JUnitTestRunner(final List<JUnitTest> tests) throws InitializationError {
         // Necessary so we can use all of the JUnit runner code written for BlockJUnit4ClassRunner.
         super(DummyClass.class);
+        System.out.println("TESTRUNNER BEING CREATED");
         this.tests.addAll(tests);
     }
 
@@ -115,6 +106,7 @@ public class JUnitTestRunner extends BlockJUnit4ClassRunner {
             if (test.javaClass().getAnnotation(Ignore.class) == null) {
                 try {
                     Configuration.config().properties().setProperty("testrunner.current_test", fullName(test.description()));
+                    System.out.println("RUNCHILD: " + test.testClass().getName());
                     runChild(test, notifier);
                 } catch (AssumptionViolatedException e) {
                     testNotifier.fireTestIgnored();
@@ -295,6 +287,8 @@ public class JUnitTestRunner extends BlockJUnit4ClassRunner {
         } catch (Throwable e) {
             return new Fail(e);
         }
+        JUnitTestRunner.testObjMap.put(testObj.getClass().getName(), testObj);
+        System.out.println("TESTOBJMAPSIZE: " + JUnitTestRunner.testObjMap.size());
 
         final FrameworkMethod method = test.frameworkMethod();
 
@@ -323,6 +317,7 @@ public class JUnitTestRunner extends BlockJUnit4ClassRunner {
             try {
                 Statement statement = usingClassRunner(test);
 
+                System.out.println("STATEMENTIFNULL: " + (statement == null));
                 if (statement == null) {
                     try {
                         eachNotifier.fireTestStarted();

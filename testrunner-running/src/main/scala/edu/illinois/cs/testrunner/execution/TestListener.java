@@ -45,6 +45,7 @@ public class TestListener extends RunListener {
     public void testStarted(Description description) throws Exception {
         //times.put(JUnitTestRunner.fullName(description), System.nanoTime());
         String fullTestName = JUnitTestRunner.fullName(description);
+        // JUnitTestRunner.createTest();
         times.put(fullTestName, System.nanoTime());
 
         String phase = readFile(MainAgent.tmpfile);
@@ -89,6 +90,7 @@ public class TestListener extends RunListener {
     @Override
     public void testFinished(Description description) throws Exception {
         final String fullTestName = JUnitTestRunner.fullName(description);
+        // JUnitTestRunner.createTest();
 
         if (times.containsKey(fullTestName)) {
             final long startTime = times.get(fullTestName);
@@ -114,14 +116,14 @@ public class TestListener extends RunListener {
                 String polluter = phase.split(" ")[1];
                 if(polluter.equals(fullTestName)) {
                     // reflect one field each time
-                    if(phase.split(" ").length == 3) {
+                    if(phase.split(" ").length >= 3) {
                         System.out.println("test listener at after!!!!!!!!! reflection on the states after!!!!!!!!!!!!!");
-                        StateCapture sc = new StateCapture(fullTestName);
+                        /* StateCapture sc = new StateCapture(fullTestName);
                         String diffField = phase.split(" ")[2];
-                        sc.fixing(diffField);
+                        // sc.fixing(diffField);
                     }
                     //reflect two fields
-                    else if(phase.split(" ").length >= 4){
+                    else if(phase.split(" ").length >= 4){ */
                         StateCapture sc = new StateCapture(fullTestName);
                         String[] tmpLists = phase.split(" ");
                         List<String> fields = new ArrayList<>();

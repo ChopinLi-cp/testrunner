@@ -9,6 +9,7 @@ import com.thoughtworks.xstream.io.xml.DomDriver;
 import com.thoughtworks.xstream.security.AnyTypePermission;
 import edu.illinois.cs.diaper.agent.MainAgent;
 import edu.illinois.cs.diaper.DiaperLogger;
+import edu.illinois.cs.testrunner.execution.JUnitTestRunner;
 
 import java.io.*;
 
@@ -64,7 +65,6 @@ import javax.xml.xpath.XPathConstants;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-
 
 public class StateCapture implements IStateCapture {
 
@@ -494,13 +494,18 @@ public class StateCapture implements IStateCapture {
 
                 System.out.println("the field name " + s + " exists in the afterRoot " +
                         "but does not exist in the beforeRoot");
+            /* else if (s.equals("java.lang.System.props.sun.java.command") || s.equals("java.lang.System.props.hadoop.log.dir")) {
+                continue;
+            } */
             else {
                 if(!file0.exists() && s.startsWith("java.lang.System.props.")) {
+                    // if(s.equals("java.lang.System.props.httpfs.log.dir") || s.equals("java.lang.System.props.httpfs.config.dir")) {
                     PrintWriter writer = new PrintWriter(subxml0 + "/" + s + ".xml", "UTF-8");
                     String content = "NEEDTOCLEAR";
                     String ob4field = serializeOBs(content);
                     writer.println(ob4field);
                     writer.close();
+                    // }
                 }
                 try{
                     state0 = readFile(path0);
@@ -745,10 +750,13 @@ public class StateCapture implements IStateCapture {
                                 ((ThreadLocal)tmp).set(ob_0);
                                 ob_0 = tmp;
                             }
+                            System.out.println("BEFORE SET: " + ob_0 + " - " + Flist[i]);
                             // Flist[i].set(null, ob_0);
                             FieldUtils.writeField(Flist[i], (Object)null, ob_0, true);
                             System.out.println("set!!!");
 
+                            Object ob_s = Flist[i].get(null);
+                            System.out.println("After SET: " + ob_0.getClass() + " - " + Flist[i]);
                             String output = fieldName + " set\n";
                             Files.write(Paths.get(reflectionFile), output.getBytes(),
                                     StandardOpenOption.APPEND);
@@ -778,9 +786,14 @@ public class StateCapture implements IStateCapture {
     public void fixingFList(List<String> fields) throws IOException {
 
         String subxml0 = subxmlFold + "/0xml";
-        String pathOfProps = subxml0 + "/java.lang.System.props.xml";
+        String subxml1 = subxmlFold + "/1xml";
+        // String pathOfProps = subxml0 + "/java.lang.System.props.xml";
+        String pathOfProps = subxml1 + "/java.lang.System.props.xml";
         String stateOfProps = readFile(pathOfProps);
+
+        XStream xstream = getXStreamInstance();
         Properties propsOfFailingOrder = new Properties();
+        // propsOfFailingOrder = xstream.fromXML(stateOfProps);
         boolean containProps = false;
         try {
             Class c = Class.forName("java.lang.System");
@@ -802,17 +815,18 @@ public class StateCapture implements IStateCapture {
                 String subFieldName = fieldName.substring(fieldName.lastIndexOf("props.")+6, fieldName.length());
 
                 Object simpleProp;
-                XStream xstream = getXStreamInstance();
 
                 try {
                     simpleProp = (String) xstream.fromXML(state0);
                     if(simpleProp.equals("NEEDTOCLEAR")) {
                         System.out.println("CLEAR: " + simpleProp + " - " + subFieldName);
                         propsOfFailingOrder.remove(subFieldName);
+                        System.out.println(propsOfFailingOrder.getProperty(subFieldName, "0"));
                     }
                     else {
                         System.out.println("CHANGE: " + simpleProp + " - " + subFieldName);
                         propsOfFailingOrder.setProperty(subFieldName, (String) simpleProp);
+                        System.out.println(propsOfFailingOrder.getProperty(subFieldName, "0"));
                     }
                 }
                 catch(Exception e) {
@@ -823,7 +837,10 @@ public class StateCapture implements IStateCapture {
                             StandardOpenOption.APPEND);
                 }
             }
-            else if (fieldName.startsWith("java.lang.System.props.")) {
+        }
+        for (int index = 0; index < fields.size(); index++) {
+            String fieldName = fields.get(index);
+            if ((fieldName.equals("java.lang.System.props") && containProps) || fieldName.startsWith("java.lang.System.props.")) {
                 continue;
             }
             else {
@@ -834,10 +851,12 @@ public class StateCapture implements IStateCapture {
             try {
                 Class c = Class.forName("java.lang.System");
                 Field props = c.getDeclaredField("props");
+                props.setAccessible(true);
                 FieldUtils.writeField(props, (Object)null, propsOfFailingOrder, true);
                 System.out.println("Props set!!!");
+                System.out.println(fields + "propsOfFailingOrder");
 
-                String output =  "props set\n";
+                String output = fields + "props set\n";
                 Files.write(Paths.get(reflectionFile), output.getBytes(),
                         StandardOpenOption.APPEND);
             }
@@ -850,6 +869,38 @@ public class StateCapture implements IStateCapture {
             }
         }
 
+        /* for (int index = 0; index < fields.size(); index++) {
+            String fieldName = fields.get(index);
+            if (fieldName.startsWith("java.lang.System.props.")) {
+                System.out.println("PROPSNAME1: " + index + " - " + fieldName);
+                String path1 = subxml1 + "/" + fieldName + ".xml";
+                String state1 = readFile(path1);
+                String subFieldName = fieldName.substring(fieldName.lastIndexOf("props.")+6, fieldName.length());
+
+                Object simpleProp1;
+
+                try {
+                    simpleProp1 = (String) xstream.fromXML(state1);
+                    if(simpleProp1.equals("NEEDTOCLEAR")) {
+                        System.out.println("CLEAR: " + simpleProp1 + " - " + subFieldName);
+                        propsOfFailingOrder.setProperty(subFieldName, (String) simpleProp1);
+                        System.out.println(propsOfFailingOrder.getProperty(subFieldName, "0"));
+                    }
+                    else {
+                        System.out.println("CHANGE: " + simpleProp1+ " - " + subFieldName);
+                        propsOfFailingOrder.setProperty(subFieldName, (String) simpleProp1);
+                        System.out.println(propsOfFailingOrder.getProperty(subFieldName, "0"));
+                    }
+                }
+                catch(Exception e) {
+                    System.out.println("exception in setting " +
+                            "field props back with reflection: " + e);
+                    String output = fieldName + " reflectionError: " + e + "\n";
+                    Files.write(Paths.get(reflectionFile), output.getBytes(),
+                            StandardOpenOption.APPEND);
+                }
+            }
+        } */
         System.out.println("reflection done!!");
     }
 
@@ -924,7 +975,7 @@ public class StateCapture implements IStateCapture {
             // Ignore classes in standard java to get top-level
             // TODO(gyori): make this read from file or config option
             String clz = c.getName();
-            if ((clz.contains("java.") && !clz.startsWith("java.lang.System"))
+            if ((clz.contains("java.")) // && !clz.startsWith("java.lang.System"))
                 || (clz.contains("javax.") && !clz.startsWith("javax.cache.Caching"))
                 || clz.contains("javafx.")
                 || clz.contains("jdk.")
@@ -964,26 +1015,40 @@ public class StateCapture implements IStateCapture {
                     //System.out.println("$$$$$$$$$$$$IGNORE$$$$$$$$ fieldName: " + fieldName);
                     continue;
                 }
-                /* boolean hasAnnotation = false;
+                boolean hasAnnotation = false;
                 for (Annotation a : f.getDeclaredAnnotations()) {
-                    if (a.annotationType().equals(Class.forName("org.springframework.beans.factory.annotation.Autowired"))) {
-                        hasAnnotation = true;
-                        break;
+                    try {
+                        Class clzOfAutowired = Class.forName("org.springframework.beans.factory.annotation.Autowired");
+                        if (a.annotationType().equals(clzOfAutowired)) {
+                            hasAnnotation = true;
+                            break;
+                        }
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
                     }
                 }
-                System.out.println("FOUND: " + hasAnnotation); */
+                System.out.println("FOUND: " + hasAnnotation);
                 // if a field is final and has a primitive type there's no point to capture it.
-                if (Modifier.isStatic(f.getModifiers())
+                if ((Modifier.isStatic(f.getModifiers()) || hasAnnotation)
                     && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
                     try {
                         if (shouldCapture(f)) {
                             allFieldName.add(fieldName);
                             f.setAccessible(true);
 
-                            //System.out.println("f.getType(): "+f.getType());
+                            // System.out.println("f.getType(): "+f.getType());
                             Object instance;
                             try {
-                                instance = f.get(null);
+                                if (hasAnnotation) {
+                                    String className = fieldName.substring(0, fieldName.lastIndexOf("."));
+                                    System.out.println("ANNOTATION: " + className);
+                                    System.out.println("TESTOBJMAP: " + JUnitTestRunner.getTestObjMap());
+                                    Object testObj = JUnitTestRunner.getTestObjMap().get(className);
+                                    instance = f.get(testObj);
+                                }
+                                else {
+                                    instance = f.get(null);
+                                }
                             } catch (NoClassDefFoundError NCDFE) {
                                 instance = null;
                                 System.out.println("error in capture real(NoClassDefFoundError): " + NCDFE);
@@ -1017,6 +1082,7 @@ public class StateCapture implements IStateCapture {
                         continue;
                     } catch (Exception exception) {
                         System.out.println("exception in capture real: " + exception);
+                        exception.printStackTrace();
                         continue;
                     }
                 }
