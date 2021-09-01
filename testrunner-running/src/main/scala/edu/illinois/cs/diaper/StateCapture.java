@@ -802,16 +802,17 @@ public class StateCapture implements IStateCapture {
             // TODO(gyori): make this read from file or config option
             String clz = c.getName();
             if ((clz.contains("java.") && !clz.startsWith("java.lang.System"))
-                || (clz.contains("javax.") && !clz.startsWith("javax.cache.Caching"))
-                || clz.contains("javafx.")
-                || clz.contains("jdk.")
-                || clz.contains("scala.")
-                || clz.contains("sun.")
-                || clz.contains("edu.illinois.cs")
-                || clz.contains("org.custommonkey.xmlunit")
-                || clz.contains("org.junit")
-                || clz.contains("diaper.com.")
-                || clz.contains("diaper.org.")) {
+                    || (clz.contains("javax.") && !clz.startsWith("javax.cache.Caching"))
+                    || clz.contains("javafx.")
+                    || clz.contains("jdk.")
+                    || clz.contains("scala.")
+                    || clz.contains("sun.")
+                    || clz.contains("edu.illinois.cs")
+                    || clz.contains("org.custommonkey.xmlunit")
+                    || clz.contains("org.junit")
+                    || clz.contains("diaper.com.")
+                    || clz.contains("diaper.org.")
+                    || clz.equals("com.openpojo.reflection.impl.AClassWithBadMethod__Generated_OpenPojo")) {
                 continue;
             }
 
@@ -828,6 +829,65 @@ public class StateCapture implements IStateCapture {
             }
             // prepare for the subxml fold
 
+            for (Field f : allFields) {
+                String fieldName = getFieldFQN(f);
+
+                if (ignores.contains(fieldName)) {
+                    continue;
+                }
+
+                // if a field is final and has a primitive type there's no point to capture it.
+                if (Modifier.isStatic(f.getModifiers())
+                        && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
+                    try {
+                        if (shouldCapture(f)) {
+                            allFieldName.add(fieldName);
+                        }
+                    } catch (Exception e) {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        int num = countDirNums(subxmlFold) - 1;
+        PrintWriter writer = new PrintWriter(MainAgent.fieldFold + "/" + num + ".txt", "UTF-8");
+        for (String ff : allFieldName) {
+            writer.println(ff);
+        }
+        writer.close();
+
+        for (Class c : loadedClasses) {
+            // Ignore classes in standard java to get top-level
+            // TODO(gyori): make this read from file or config option
+            String clz = c.getName();
+            if ((clz.contains("java.") && !clz.startsWith("java.lang.System"))
+                || (clz.contains("javax.") && !clz.startsWith("javax.cache.Caching"))
+                || clz.contains("javafx.")
+                || clz.contains("jdk.")
+                || clz.contains("scala.")
+                || clz.contains("sun.")
+                || clz.contains("edu.illinois.cs")
+                || clz.contains("org.custommonkey.xmlunit")
+                || clz.contains("org.junit")
+                || clz.contains("diaper.com.")
+                || clz.contains("diaper.org.")
+                || clz.equals("com.openpojo.reflection.impl.AClassWithBadMethod__Generated_OpenPojo")) {
+                continue;
+            }
+
+            Set<Field> allFields = new HashSet<Field>();
+            try {
+                Field[] declaredFields = c.getDeclaredFields();
+                Field[] fields = c.getFields();
+                allFields.addAll(Arrays.asList(declaredFields));
+                allFields.addAll(Arrays.asList(fields));
+            } catch (NoClassDefFoundError e) {
+                continue;
+            } catch (Exception exception) {
+                continue;
+            }
+            // prepare for the subxml fold
 
             for (Field f : allFields) {
                 String fieldName = getFieldFQN(f);
@@ -842,7 +902,6 @@ public class StateCapture implements IStateCapture {
                     && !(Modifier.isFinal(f.getModifiers()) &&  f.getType().isPrimitive())) {
                     try {
                         if (shouldCapture(f)) {
-                            allFieldName.add(fieldName);
                             f.setAccessible(true);
 
                             Object instance;
@@ -864,7 +923,7 @@ public class StateCapture implements IStateCapture {
                                 nameToInstance.put(fieldName, instance);
 
                                 String ob4field = serializeOBs(instance);
-                                PrintWriter writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
+                                writer = new PrintWriter(subxmlDir + "/" + fieldName + ".xml", "UTF-8");
                                 writer.println(ob4field);
                                 writer.close();
                             }
@@ -880,16 +939,10 @@ public class StateCapture implements IStateCapture {
             }
         }
 
-        int num = countDirNums(subxmlFold) - 1;
-        PrintWriter writer = new PrintWriter(rootFold + "/" + num + ".txt", "UTF-8");
+
+        writer = new PrintWriter(rootFold + "/" + num + ".txt", "UTF-8");
         for (String key : nameToInstance.keySet()) {
             writer.println(key);
-        }
-        writer.close();
-
-        writer = new PrintWriter(MainAgent.fieldFold + "/" + num + ".txt", "UTF-8");
-        for (String ff : allFieldName) {
-            writer.println(ff);
         }
         writer.close();
     }
